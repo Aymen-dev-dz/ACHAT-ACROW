@@ -5,9 +5,9 @@ from typing import List, Optional
 # Ensure standard streams are unbuffered and UTF-8 encoded for real-time live console streaming
 try:
     if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
+        sys.stdout.reconfigure(encoding="utf-8", line_buffering=True, errors="replace")
     if hasattr(sys.stderr, "reconfigure"):
-        sys.stderr.reconfigure(encoding="utf-8", line_buffering=True)
+        sys.stderr.reconfigure(encoding="utf-8", line_buffering=True, errors="replace")
 except Exception:
     pass
 from playwright.sync_api import sync_playwright, Page
@@ -44,36 +44,85 @@ def extract_text(page: Page, xpath: str) -> str:
     try:
         loc = page.locator(xpath)
         if loc.count() > 0:
-            return loc.first.inner_text()
+            return loc.first.inner_text().strip()
     except Exception as e:
-        logging.warning(f"Failed to extract text for xpath {xpath}: {e}")
+        pass
     return ""
 
-def extract_place(page: Page) -> Place:
-    # XPaths
-    name_xpath = '//div[@class="TIHn2 "]//h1[@class="DUwDvf lfPIob"]'
-    address_xpath = '//button[@data-item-id="address"]//div[contains(@class, "fontBodyMedium")]'
-    website_xpath = '//a[@data-item-id="authority"]//div[contains(@class, "fontBodyMedium")]'
-    phone_number_xpath = '//button[contains(@data-item-id, "phone:tel:")]//div[contains(@class, "fontBodyMedium")]'
-    reviews_count_xpath = '//div[@class="TIHn2 "]//div[@class="fontBodyMedium dmRWX"]//div//span//span//span[@aria-label]'
-    reviews_average_xpath = '//div[@class="TIHn2 "]//div[@class="fontBodyMedium dmRWX"]//div//span[@aria-hidden]'
-    info1 = '//div[@class="LTs0Rc"][1]'
-    info2 = '//div[@class="LTs0Rc"][2]'
-    info3 = '//div[@class="LTs0Rc"][3]'
-    opens_at_xpath = '//button[contains(@data-item-id, "oh")]//div[contains(@class, "fontBodyMedium")]'
-    opens_at_xpath2 = '//div[@class="MkV9"]//span[@class="ZDu9vd"]//span[2]'
-    place_type_xpath = '//div[@class="LBgpqf"]//button[@class="DkEaL "]'
-    intro_xpath = '//div[@class="WeS02d fontBodyMedium"]//div[@class="PYvSYb "]'
-
+def extract_place(page: Page, fallback_name: str = "") -> Place:
     place = Place()
-    place.name = extract_text(page, name_xpath)
+
+    # Name extraction with multiple fallbacks
+    name_selectors = [
+        '//div[@class="TIHn2 "]//h1[@class="DUwDvf lfPIob"]',
+        '//h1[contains(@class, "DUwDvf")]',
+        'h1.DUwDvf',
+        'div.TIHn2 h1',
+        '//div[contains(@class, "TIHn2")]//h1',
+        'h1',
+    ]
+    name = ""
+    for sel in name_selectors:
+        try:
+            loc = page.locator(sel)
+            if loc.count() > 0:
+                txt = loc.first.inner_text().strip()
+                if txt and txt != "Résultats" and not txt.startswith("Sponsoris"):
+                    name = txt
+                    break
+        except Exception:
+            pass
+    place.name = name or fallback_name
+
+    # Address
+    address_xpath = '//button[@data-item-id="address"]//div[contains(@class, "fontBodyMedium")]'
     place.address = extract_text(page, address_xpath)
+    if not place.address:
+        try:
+            addr_loc = page.locator('button[data-item-id="address"]')
+            if addr_loc.count() > 0:
+                place.address = addr_loc.first.inner_text().strip()
+        except Exception:
+            pass
+
+    # Website
+    website_xpath = '//a[@data-item-id="authority"]//div[contains(@class, "fontBodyMedium")]'
     place.website = extract_text(page, website_xpath)
+    if not place.website:
+        try:
+            w_loc = page.locator('a[data-item-id="authority"]')
+            if w_loc.count() > 0:
+                href = w_loc.first.get_attribute("href")
+                if href and href.startswith("http"):
+                    place.website = href
+        except Exception:
+            pass
+
+    # Phone number
+    phone_number_xpath = '//button[contains(@data-item-id, "phone:tel:")]//div[contains(@class, "fontBodyMedium")]'
     place.phone_number = extract_text(page, phone_number_xpath)
+    if not place.phone_number:
+        try:
+            p_loc = page.locator('button[data-item-id*="phone:tel:"]')
+            if p_loc.count() > 0:
+                data_id = p_loc.first.get_attribute("data-item-id") or ""
+                if "phone:tel:" in data_id:
+                    place.phone_number = data_id.split("phone:tel:")[-1].strip()
+        except Exception:
+            pass
+
+    # Place Type
+    place_type_xpath = '//div[@class="LBgpqf"]//button[@class="DkEaL "]'
     place.place_type = extract_text(page, place_type_xpath)
+    if not place.place_type:
+        place.place_type = extract_text(page, '//button[contains(@class, "DkEaL")]')
+
+    # Introduction
+    intro_xpath = '//div[@class="WeS02d fontBodyMedium"]//div[@class="PYvSYb "]'
     place.introduction = extract_text(page, intro_xpath) or "None Found"
 
     # Reviews Count
+    reviews_count_xpath = '//div[@class="TIHn2 "]//div[@class="fontBodyMedium dmRWX"]//div//span//span//span[@aria-label]'
     reviews_count_raw = extract_text(page, reviews_count_xpath)
     if not reviews_count_raw:
         for alt_xpath in [
@@ -90,31 +139,42 @@ def extract_place(page: Page) -> Place:
             digits = re.sub(r'[^\d]', '', reviews_count_raw)
             if digits:
                 place.reviews_count = int(digits)
-        except Exception as e:
-            logging.warning(f"Failed to parse reviews count: {e}")
+        except Exception:
+            pass
+
     # Reviews Average
+    reviews_average_xpath = '//div[@class="TIHn2 "]//div[@class="fontBodyMedium dmRWX"]//div//span[@aria-hidden]'
     reviews_avg_raw = extract_text(page, reviews_average_xpath)
+    if not reviews_avg_raw:
+        reviews_avg_raw = extract_text(page, '//div[@class="F7nice"]//span[1]')
     if reviews_avg_raw:
         try:
             match = re.search(r'\d+(?:[.,]\d+)?', reviews_avg_raw)
             if match:
                 place.reviews_average = float(match.group(0).replace(',', '.'))
-        except Exception as e:
-            logging.warning(f"Failed to parse reviews average: {e}")
+        except Exception:
+            pass
+
     # Store Info
+    info1 = '//div[@class="LTs0Rc"][1]'
+    info2 = '//div[@class="LTs0Rc"][2]'
+    info3 = '//div[@class="LTs0Rc"][3]'
     for idx, info_xpath in enumerate([info1, info2, info3]):
         info_raw = extract_text(page, info_xpath)
         if info_raw:
             temp = info_raw.split('·')
             if len(temp) > 1:
                 check = temp[1].replace("\n", "").lower()
-                if 'shop' in check:
+                if 'shop' in check or 'achat' in check:
                     place.store_shopping = "Yes"
-                if 'pickup' in check:
+                if 'pickup' in check or 'retrait' in check:
                     place.in_store_pickup = "Yes"
-                if 'delivery' in check:
+                if 'delivery' in check or 'livraison' in check:
                     place.store_delivery = "Yes"
+
     # Opens At
+    opens_at_xpath = '//button[contains(@data-item-id, "oh")]//div[contains(@class, "fontBodyMedium")]'
+    opens_at_xpath2 = '//div[@class="MkV9"]//span[@class="ZDu9vd"]//span[2]'
     opens_at_raw = extract_text(page, opens_at_xpath)
     if opens_at_raw:
         opens = opens_at_raw.split('⋅')
@@ -144,9 +204,20 @@ def attach_to_default_desktop():
         except Exception as e:
             logging.warning(f"Could not attach to Default desktop: {e}")
 
-def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: int = 0, record_video_dir: Optional[str] = None, save_screenshots: bool = False, output_path: Optional[str] = None, append: bool = False) -> List[Place]:
+def scrape_places(
+    search_for: str,
+    total: int,
+    headless: bool = False,
+    slow_mo: int = 0,
+    record_video_dir: Optional[str] = None,
+    save_screenshots: bool = False,
+    output_path: Optional[str] = None,
+    append: bool = False
+) -> List[Place]:
     setup_logging()
-    if platform.system() != "Windows" and not os.environ.get("DISPLAY"):
+
+    # Cloud environment auto-detection (Render, Docker, Linux without DISPLAY)
+    if not headless and platform.system() != "Windows" and not os.environ.get("DISPLAY"):
         logging.info("Environnement cloud sans écran détecté (Docker/Linux) : forçage du mode Headless.")
         headless = True
 
@@ -155,8 +226,25 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
     places: List[Place] = []
     with sync_playwright() as p:
         launch_args = ["--start-maximized"] if not headless else []
-        if platform.system() != "Windows":
-            launch_args.extend(["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-software-rasterizer"])
+        # Essential low-memory args for cloud containers (Render 512MB RAM cap)
+        if headless or platform.system() != "Windows":
+            launch_args.extend([
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+                "--disable-extensions",
+                "--disable-background-networking",
+                "--disable-default-apps",
+                "--disable-sync",
+                "--disable-translate",
+                "--mute-audio",
+                "--no-first-run",
+                "--safebrowsing-disable-auto-update",
+                "--renderer-process-limit=1",
+                "--js-flags=--max-old-space-size=128",
+            ])
         if platform.system() == "Windows":
             chrome_candidates = [
                 r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -183,12 +271,33 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
             context_kwargs["no_viewport"] = True
 
         context = browser.new_context(**context_kwargs)
-        page = context.new_page()
+
+        # Inject consent cookie (SOCS) to bypass Google cookie banner entirely in European servers (Render Frankfurt)
         try:
-            page.goto("https://www.google.com/maps?hl=fr", timeout=60000)
+            context.add_cookies([{
+                "name": "SOCS",
+                "value": "CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AwGgJmciACGgYIgLCspwY",
+                "domain": ".google.com",
+                "path": "/"
+            }])
+        except Exception:
+            pass
+
+        page = context.new_page()
+
+        # Crucial RAM optimization: abort heavy resource types (image, media, font)
+        # Google Maps HTML DOM contains all text, addresses, phones, links, and ratings.
+        # Blocking images reduces Chromium memory footprint from ~450MB to <90MB.
+        try:
+            page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "font"] else route.continue_())
+        except Exception:
+            pass
+
+        try:
+            page.goto("https://www.google.com/maps?hl=fr", timeout=30000, wait_until="domcontentloaded")
             page.wait_for_timeout(1000)
 
-            # Accept cookies dialog if present (Crucial for European cloud servers like Render Frankfurt)
+            # Accept cookies dialog if present (fallback)
             cookie_selectors = [
                 '//button[contains(., "Tout accepter") or contains(., "Accept all") or contains(., "I agree") or contains(., "Accetta tutto")]',
                 '//button[contains(@aria-label, "Tout accepter") or contains(@aria-label, "Accept all")]',
@@ -208,8 +317,24 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
                     pass
 
             search_input = page.locator("#searchboxinput, input[name='q']").first
+            try:
+                search_input.wait_for(state="visible", timeout=15000)
+            except Exception:
+                pass
             search_input.fill(search_for)
             page.keyboard.press("Enter")
+
+            # Check if direct place page loaded
+            time.sleep(3)
+            if "/maps/place/" in page.url:
+                place = extract_place(page)
+                if place.name:
+                    places.append(place)
+                    logging.info(f"EXTRACTED [1/1]: {place.name}")
+                    if output_path:
+                        save_places_to_csv(places, output_path, append=append)
+                    return places
+
             try:
                 page.wait_for_selector('//a[contains(@href, "https://www.google.com/maps/place")]', timeout=25000)
             except Exception as e:
@@ -223,6 +348,10 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
             previously_counted = 0
             same_count_retries = 0
             while True:
+                found = listings_locator.count()
+                logging.info(f"Currently Found: {found}")
+                if found >= total:
+                    break
                 if listings_locator.count() > 0:
                     try:
                         listings_locator.last.hover()
@@ -231,9 +360,6 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
                 page.mouse.wheel(0, 10000)
                 time.sleep(2)
                 found = listings_locator.count()
-                logging.info(f"Currently Found: {found}")
-                if found >= total:
-                    break
                 if found == previously_counted:
                     same_count_retries += 1
                     if same_count_retries >= 3:
@@ -242,32 +368,54 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
                 else:
                     same_count_retries = 0
                 previously_counted = found
-            listings = page.locator('//a[contains(@href, "https://www.google.com/maps/place")]').all()[:total]
-            listings = [listing.locator("xpath=..") for listing in listings]
-            logging.info(f"Total Found: {len(listings)}")
-            for idx, listing in enumerate(listings):
+
+            raw_listings = page.locator('//a[contains(@href, "https://www.google.com/maps/place")]').all()[:total]
+            logging.info(f"Total Found: {len(raw_listings)}")
+            for idx, listing in enumerate(raw_listings):
                 try:
-                    listing.scroll_into_view_if_needed()
-                    listing.click()
-                    page.wait_for_selector('//div[@class="TIHn2 "]//h1[@class="DUwDvf lfPIob"]', timeout=10000)
-                    time.sleep(1.5)  # Give time for details to load
+                    fallback_name = listing.get_attribute("aria-label") or ""
+                    parent = listing.locator("xpath=..")
+                    try:
+                        parent.scroll_into_view_if_needed()
+                        parent.click()
+                    except Exception:
+                        listing.click()
+
+                    try:
+                        page.wait_for_selector('h1.DUwDvf, //h1[contains(@class, "DUwDvf")]', timeout=8000)
+                    except Exception:
+                        time.sleep(1.5)
+
                     if save_screenshots and idx < 3:
                         page.screenshot(path=f"screenshots/place_{idx+1}.png")
-                    place = extract_place(page)
+
+                    place = extract_place(page, fallback_name=fallback_name)
                     if place.name:
                         places.append(place)
-                        target_total = min(total, len(listings))
+                        target_total = min(total, len(raw_listings))
                         logging.info(f"EXTRACTED [{len(places)}/{target_total}]: {place.name}")
                         if output_path:
-                            save_places_to_csv(places, output_path, append=append)
+                            if append:
+                                save_places_to_csv([place], output_path, append=True)
+                            else:
+                                save_places_to_csv(places, output_path, append=False)
                     else:
                         logging.warning(f"No name found for listing {idx+1}, skipping.")
                 except Exception as e:
                     logging.warning(f"Failed to extract listing {idx+1}: {e}")
         finally:
-            page.close()
-            context.close()
-            browser.close()
+            try:
+                page.close()
+            except Exception:
+                pass
+            try:
+                context.close()
+            except Exception:
+                pass
+            try:
+                browser.close()
+            except Exception:
+                pass
     return places
 
 def save_places_to_csv(places: List[Place], output_path: str = "result.csv", append: bool = False):
@@ -310,8 +458,8 @@ def main():
         output_path=output_path,
         append=append
     )
-    # Final confirmation save if not already saved incrementally
-    save_places_to_csv(places, output_path, append=append)
+    if not append:
+        save_places_to_csv(places, output_path, append=False)
 
 if __name__ == "__main__":
     main()

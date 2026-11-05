@@ -8,16 +8,13 @@
 [build.environment]
   PYTHON_VERSION = "3.10"
 
-# Redirection SPA & API
-# NOTE : Netlify héberge l'interface statique (HTML/CSS/JS).
-# Le scraping Playwright/Chrome requiert un backend persistant (Render / Railway / VPS).
-# Pour connecter l'interface Netlify à votre backend hébergé :
-# Décommentez et remplacez par votre URL de backend (ex: https://acrow-scraper.onrender.com) :
-# [[redirects]]
-#   from = "/api/*"
-#   to = "https://VOTRE-BACKEND.onrender.com/api/:splat"
-#   status = 200
-#   force = true
+# Redirection Proxy vers le backend Render & SPA Fallback
+# Chaque appel /api/* depuis l'interface Netlify est directement relayé vers le backend Render
+[[redirects]]
+  from = "/api/*"
+  to = "https://achat-acrow.onrender.com/api/:splat"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"

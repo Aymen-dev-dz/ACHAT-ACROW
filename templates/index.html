@@ -1056,8 +1056,8 @@
     let sortAsc = true;
     let eventSource = null;
 
-    // Backend URL handling (useful for Netlify -> Cloud Backend)
-    let apiBaseUrl = localStorage.getItem('acrow_backend_url') || '';
+    // Backend URL handling (automatically connects Netlify frontend to Render backend)
+    let apiBaseUrl = localStorage.getItem('acrow_backend_url') || (window.location.hostname.includes('netlify.app') ? 'https://achat-acrow.onrender.com' : '');
 
     function apiUrl(path) {
       if (!apiBaseUrl) return path;
