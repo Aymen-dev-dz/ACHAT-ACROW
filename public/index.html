@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACROW DZ — Procurement Scraper (by Aymen)</title>
+  <link rel="icon" type="image/png" href="/static/img/logo.png">
+
+  <!-- Tailwind CSS & DaisyUI CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            acrow: {
+              navy: '#111c38',
+              navyHover: '#0a1226',
+              navyLight: '#1e2f5b',
+              red: '#c1121f',
+              redHover: '#a00f1a',
+              redLight: '#dc2626',
+              slate: '#475569',
+            }
+          },
+          boxShadow: {
+            'card': '0 4px 20px -2px rgba(17, 28, 56, 0.08), 0 2px 6px -2px rgba(17, 28, 56, 0.04)',
+            'card-hover': '0 12px 30px -4px rgba(17, 28, 56, 0.12), 0 4px 10px -2px rgba(17, 28, 56, 0.06)',
+            'glow-red': '0 0 25px -4px rgba(193, 18, 31, 0.35)',
+            'glow-navy': '0 0 25px -4px rgba(17, 28, 56, 0.35)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(17, 28, 56, 0.04) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(193, 18, 31, 0.04) 0px, transparent 50%),
+        radial-gradient(at 50% 10%, rgba(255, 255, 255, 0.8) 0px, transparent 80%);
+      background-attachment: fixed;
+    }
+
+    /* Ambient background grid */
+    .bg-grid-pattern {
+      background-size: 28px 28px;
+      background-image: 
+        linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+    }
+
+    /* Clean Corporate White Card */
+    .acrow-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.03);
+    }
+
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #111c38;
+    }
+
+    /* ACROW Shimmer Progress Bar (Navy Blue -> Crimson Red) */
+    @keyframes acrowShimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .animate-acrow {
+      background: linear-gradient(90deg, #111c38 0%, #c1121f 50%, #111c38 100%);
+      background-size: 200% 100%;
+      animation: acrowShimmer 2.8s infinite linear;
+    }
+
+    /* Pulse Glow */
+    @keyframes pulseNavy {
+      0% { box-shadow: 0 0 0 0 rgba(17, 28, 56, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(17, 28, 56, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(17, 28, 56, 0); }
+    }
+    .pulse-navy {
+      animation: pulseNavy 2s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-[#c1121f] selection:text-white bg-grid-pattern">
+
+  <!-- ======================================================== -->
+  <!-- TOP NAVIGATION HEADER (WHITE BACKGROUND + ACROW LOGO) -->
+  <!-- ======================================================== -->
+  <header class="border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-sm transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[5.25rem] py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-6">
+      
+      <!-- ACROW Logo + Brand Title -->
+      <div class="flex items-center gap-3 sm:gap-4 shrink-0">
+        <!-- Logo Image (Grand & Net) -->
+        <a href="/" class="flex items-center group py-1">
+          <img 
+            src="/static/img/logo.png" 
+            alt="ACROW Formwork Technology" 
+            class="h-12 sm:h-14 md:h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-105" 
+          />
+        </a>
+
+        <!-- Separator bar -->
+        <div class="hidden sm:block h-10 w-[1.5px] bg-slate-200"></div>
+
+        <!-- Name & Subtitle -->
+        <div class="flex flex-col justify-center">
+          <div class="flex items-center flex-wrap gap-1.5 sm:gap-2">
+            <span class="font-black text-lg sm:text-xl tracking-tight text-[#111c38]">
+              ACROW DZ
+            </span>
+            <span class="hidden xs:inline-block px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider bg-[#111c38] text-white shadow-sm border border-[#1e2f5b]">
+              Procurement Scraper
+            </span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider bg-[#c1121f] text-white shadow-sm">
+              by Aymen
+            </span>
+          </div>
+          <p class="hidden sm:block text-[11px] text-slate-500 font-semibold tracking-tight mt-0.5">
+            Plateforme de Sourcing Fournisseurs & Intelligence Achats
+          </p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Bleu & Rouge) -->
+      <nav class="hidden lg:flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-100 border border-slate-200/90 shadow-inner">
+        <button onclick="switchTab('studio')" id="tab-btn-studio" class="nav-tab px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 bg-[#111c38] text-white shadow-sm">
+          <i class="fa-solid fa-bolt text-xs text-white"></i>
+          <span>Studio Sourcing</span>
+        </button>
+        <button onclick="switchTab('data')" id="tab-btn-data" class="nav-tab px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70">
+          <i class="fa-solid fa-table-list text-xs text-[#111c38]"></i>
+          <span>Fournisseurs Extraits</span>
+          <span id="nav-leads-badge" class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#c1121f] text-white">0</span>
+        </button>
+        <button onclick="switchTab('files')" id="tab-btn-files" class="nav-tab px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70">
+          <i class="fa-solid fa-folder-closed text-xs text-slate-500"></i>
+          <span>Fichiers & Exports</span>
+          <span class="w-2 h-2 rounded-full bg-[#c1121f]"></span>
+        </button>
+        <button onclick="switchTab('media')" id="tab-btn-media" class="nav-tab px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70">
+          <i class="fa-solid fa-photo-film text-xs text-[#111c38]"></i>
+          <span>Médias</span>
+        </button>
+      </nav>
+
+      <!-- Status Indicator & Quick Docs -->
+      <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+        <div id="status-pill" class="flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold shadow-sm">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="status-text">Système Prêt</span>
+        </div>
+
+        <button onclick="toggleQuickDocs()" class="btn btn-sm btn-circle btn-ghost text-slate-500 hover:text-slate-900 hover:bg-slate-100" title="Aide & Raccourcis">
+          <i class="fa-regular fa-circle-question text-base"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Mobile Navigation Bar -->
+  <div class="flex lg:hidden border-b border-slate-200 bg-white px-3 py-2 gap-1.5 overflow-x-auto sticky top-[84px] z-30 shadow-sm">
+    <button onclick="switchTab('studio')" class="nav-tab-m flex-1 py-1.5 px-3 rounded-xl text-xs font-bold text-center bg-[#111c38] text-white whitespace-nowrap">
+      <i class="fa-solid fa-bolt mr-1"></i> Studio
+    </button>
+    <button onclick="switchTab('data')" class="nav-tab-m flex-1 py-1.5 px-3 rounded-xl text-xs font-bold text-center text-slate-700 hover:bg-slate-100 whitespace-nowrap">
+      <i class="fa-solid fa-table mr-1"></i> Fournisseurs
+    </button>
+    <button onclick="switchTab('files')" class="nav-tab-m flex-1 py-1.5 px-3 rounded-xl text-xs font-bold text-center text-slate-700 hover:bg-slate-100 whitespace-nowrap">
+      <i class="fa-solid fa-folder mr-1"></i> Fichiers
+    </button>
+    <button onclick="switchTab('media')" class="nav-tab-m flex-1 py-1.5 px-3 rounded-xl text-xs font-bold text-center text-slate-700 hover:bg-slate-100 whitespace-nowrap">
+      <i class="fa-solid fa-film mr-1"></i> Médias
+    </button>
+  </div>
+
+  <!-- Cloud Alert Banner (Affiché sur Netlify si aucun backend n'est branché) -->
+  <div id="cloud-banner" class="hidden bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-xs text-amber-900 transition-all">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-200 text-amber-800 font-bold shrink-0">
+          <i class="fa-solid fa-cloud"></i>
+        </span>
+        <span class="leading-relaxed">
+          <strong>Mode Cloud Démo (Netlify) :</strong> Aucun serveur Python/Playwright n'est connecté. Pour extraire avec Chrome, ouvrez l'application en local sur votre PC via <strong>lancer_plateforme.bat</strong> (<a href="http://127.0.0.1:7860" target="_blank" class="underline font-bold text-amber-950">127.0.0.1:7860</a>) ou connectez votre backend cloud.
+        </span>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="openBackendModal()" class="px-3 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 font-bold text-amber-900 text-xs shadow-sm transition">
+          <i class="fa-solid fa-link mr-1"></i> Connecter Backend
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MAIN WORKSPACE -->
+  <!-- ======================================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ======================================================== -->
+    <!-- TAB 1: STUDIO SCRAPING -->
+    <!-- ======================================================== -->
+    <div id="tab-studio" class="space-y-6 transition-all duration-300">
+
+      <!-- Hero Header (White Card with ACROW Navy & Red Borders) -->
+      <div class="relative overflow-hidden rounded-3xl acrow-card p-6 sm:p-8 border-t-4 border-t-[#111c38] border-b-4 border-b-[#c1121f]">
+        
+        <div class="relative z-10 max-w-4xl space-y-3">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#111c38] text-xs font-bold">
+            <span class="w-2 h-2 rounded-full bg-[#c1121f] mr-0.5"></span>
+            <span>Moteur d'extraction Playwright & Chrome v1.64 — Département Achats & Sourcing</span>
+          </div>
+
+          <h1 class="text-2xl sm:text-4xl font-black text-[#111c38] tracking-tight leading-tight">
+            Sourcing Fournisseurs & Intelligence Achats Google Maps
+          </h1>
+          <p class="text-sm sm:text-base text-slate-600 leading-relaxed max-w-3xl font-medium">
+            Trouvez et qualifiez rapidement vos fournisseurs industriels, usines, quincailleries BTP, transporteurs et sous-traitants en Algérie. Numéros, adresses et sites web exportables en <span class="text-[#111c38] font-black bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">Excel (.xlsx)</span>, <span class="text-[#c1121f] font-black bg-red-50 px-2 py-0.5 rounded-lg border border-red-200">CSV</span> ou <span class="text-slate-800 font-bold">JSON</span>.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Main Layout: Form (7) & Monitor (5) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Form Column (7) -->
+        <div class="lg:col-span-7 space-y-6">
+          <div class="acrow-card rounded-3xl p-6 sm:p-7 space-y-6">
+            
+            <div class="flex items-center justify-between pb-3.5 border-b border-slate-200">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#111c38] flex items-center justify-center text-sm border border-blue-200">
+                  <i class="fa-solid fa-sliders"></i>
+                </div>
+                <h2 class="text-base font-black text-[#111c38]">Paramètres de la mission</h2>
+              </div>
+              <span class="text-xs text-slate-500 font-mono flex items-center gap-1 font-semibold">
+                <kbd class="px-2 py-0.5 bg-slate-100 text-slate-800 rounded-md border border-slate-300 text-[10px] font-bold">Ctrl + Entrée</kbd> pour lancer
+              </span>
+            </div>
+
+            <!-- Search Query Box -->
+            <div class="space-y-2">
+              <label class="text-xs font-black text-[#111c38] uppercase tracking-wider flex items-center justify-between">
+                <span>Fournisseur / Activité / Ville à sourcer <span class="text-[#c1121f]">*</span></span>
+                <span class="text-[11px] text-slate-500 font-normal">Ex: Quincaillerie, Acier, Transport + Ville</span>
+              </label>
+              <div class="relative group">
+                <div class="absolute left-4 top-3.5 text-[#111c38]">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <input 
+                  type="text" 
+                  id="input-search" 
+                  placeholder="Ex: quincaillerie industrielle Alger, fournisseurs acier Rouiba, transport lourd Oran, bois coffrage..." 
+                  value="quincaillerie industrielle Alger"
+                  onkeydown="if(event.ctrlKey && event.key==='Enter') startScrape()"
+                  class="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#111c38] focus:ring-2 focus:ring-[#111c38]/15 transition text-sm font-bold shadow-sm"
+                />
+              </div>
+            </div>
+
+            <!-- Volume Slider & Preset Buttons -->
+            <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <div class="flex items-center justify-between text-xs font-bold text-[#111c38]">
+                <label class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-bullseye text-[#c1121f]"></i>
+                  Volume de fiches à extraire : <span id="label-total" class="text-[#111c38] font-black text-base ml-1">10</span>
+                </label>
+                <div class="flex gap-1.5">
+                  <button type="button" onclick="setTotalCount(5)" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#111c38] hover:text-white text-slate-800 text-xs font-mono font-bold border border-slate-300 shadow-sm transition">5</button>
+                  <button type="button" onclick="setTotalCount(10)" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#111c38] hover:text-white text-slate-800 text-xs font-mono font-bold border border-slate-300 shadow-sm transition">10</button>
+                  <button type="button" onclick="setTotalCount(25)" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#111c38] hover:text-white text-slate-800 text-xs font-mono font-bold border border-slate-300 shadow-sm transition">25</button>
+                  <button type="button" onclick="setTotalCount(50)" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#111c38] hover:text-white text-slate-800 text-xs font-mono font-bold border border-slate-300 shadow-sm transition">50</button>
+                  <button type="button" onclick="setTotalCount(100)" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#111c38] hover:text-white text-slate-800 text-xs font-mono font-bold border border-slate-300 shadow-sm transition">100</button>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <input 
+                  type="range" 
+                  id="range-total" 
+                  min="1" 
+                  max="150" 
+                  value="10" 
+                  class="range range-sm flex-1 accent-[#111c38]"
+                  oninput="onTotalChange(this.value)"
+                />
+                <input 
+                  type="number" 
+                  id="input-total" 
+                  min="1" 
+                  max="500" 
+                  value="10" 
+                  class="w-20 px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-center font-black text-sm text-[#111c38] font-mono focus:outline-none focus:border-[#111c38] shadow-sm"
+                  oninput="onTotalChange(this.value)"
+                />
+              </div>
+            </div>
+
+            <!-- Segmented Mode Cards: Visual vs Headless -->
+            <div class="space-y-2">
+              <label class="text-xs font-black text-[#111c38] uppercase tracking-wider">Mode de visualisation</label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                
+                <!-- Visual Option Card (Navy) -->
+                <div id="mode-card-visual" onclick="selectMode('visual')" class="cursor-pointer border-2 border-[#111c38] bg-blue-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm">
+                  <div class="mt-0.5">
+                    <input type="radio" name="browser-mode" value="visual" checked class="radio radio-sm accent-[#111c38]">
+                  </div>
+                  <div class="space-y-1">
+                    <div class="font-black text-sm text-[#111c38] flex items-center gap-2">
+                      <i class="fa-solid fa-eye text-[#111c38]"></i> Mode Visuel
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed font-medium">
+                      La fenêtre Chrome s'ouvre à l'écran pour observer le défilement et la collecte.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Headless Option Card (Red) -->
+                <div id="mode-card-headless" onclick="selectMode('headless')" class="cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#c1121f]/50">
+                  <div class="mt-0.5">
+                    <input type="radio" name="browser-mode" value="headless" class="radio radio-sm accent-[#c1121f]">
+                  </div>
+                  <div class="space-y-1">
+                    <div class="font-black text-sm text-[#111c38] flex items-center gap-2">
+                      <i class="fa-solid fa-ghost text-[#c1121f]"></i> Mode Arrière-plan
+                    </div>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                      Silencieux et sans fenêtre visible, parfait pour les grandes séries.
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Collapsible Advanced Options -->
+            <div class="pt-2 border-t border-slate-200">
+              <button type="button" onclick="toggleAdvancedOptions()" class="text-xs font-black text-[#111c38] hover:text-[#c1121f] flex items-center gap-2 py-1 transition-colors">
+                <i id="advanced-arrow" class="fa-solid fa-chevron-right text-[10px] transition-transform"></i>
+                <span>Options avancées (Ralentisseur, Fichier CSV, Captures...)</span>
+              </button>
+
+              <div id="advanced-options" class="hidden mt-4 space-y-4 pt-2">
+                
+                <!-- Slow-mo Slider -->
+                <div class="space-y-1.5 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <div class="flex justify-between text-xs text-slate-800">
+                    <label class="font-bold flex items-center gap-1.5">
+                      <i class="fa-solid fa-gauge-high text-[#111c38]"></i> Vitesse d'action (Slow-Mo) : <span id="label-slowmo" class="font-mono text-[#c1121f] font-bold">200ms</span>
+                    </label>
+                    <span class="text-[11px] text-slate-500">Imite une navigation humaine</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    id="range-slowmo" 
+                    min="0" 
+                    max="1000" 
+                    step="50" 
+                    value="200" 
+                    class="range range-xs accent-[#111c38]"
+                    oninput="document.getElementById('label-slowmo').innerText = this.value + 'ms'"
+                  />
+                </div>
+
+                <!-- Custom CSV Output Filename -->
+                <div class="space-y-1.5">
+                  <label class="text-xs font-bold text-slate-800 flex items-center justify-between">
+                    <span>Nom du fichier CSV de sortie :</span>
+                    <span class="text-[11px] text-slate-500">Sauvegarde automatique</span>
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                      <i class="fa-solid fa-file-csv absolute left-3.5 top-3 text-[#c1121f] text-xs"></i>
+                      <input 
+                        type="text" 
+                        id="input-output-file" 
+                        value="resultats_scraper.csv"
+                        placeholder="nom_du_fichier.csv" 
+                        class="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 font-mono focus:outline-none focus:border-[#111c38]"
+                      />
+                    </div>
+                    <button type="button" onclick="autoGenerateFilename()" class="btn btn-sm bg-slate-100 hover:bg-[#111c38] hover:text-white text-slate-700 border-slate-300 text-xs shadow-sm" title="Générer automatiquement">
+                      <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Checkboxes: Append, Screenshots, Video -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <label class="flex items-center gap-2.5 text-xs text-slate-800 cursor-pointer bg-white p-3 rounded-xl border border-slate-200 hover:border-[#111c38] shadow-sm transition">
+                    <input type="checkbox" id="check-append" class="checkbox checkbox-xs accent-[#111c38]">
+                    <span class="font-bold">Ajouter (Append)</span>
+                  </label>
+
+                  <label class="flex items-center gap-2.5 text-xs text-slate-800 cursor-pointer bg-white p-3 rounded-xl border border-slate-200 hover:border-[#c1121f] shadow-sm transition">
+                    <input type="checkbox" id="check-screenshots" class="checkbox checkbox-xs accent-[#c1121f]">
+                    <span class="font-bold">Captures PNG</span>
+                  </label>
+
+                  <label class="flex items-center gap-2.5 text-xs text-slate-800 cursor-pointer bg-white p-3 rounded-xl border border-slate-200 hover:border-[#111c38] shadow-sm transition">
+                    <input type="checkbox" id="check-video" class="checkbox checkbox-xs accent-[#111c38]">
+                    <span class="font-bold">Enregistrer Vidéo</span>
+                  </label>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Big Action Trigger Buttons (ACROW Navy & Red) -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-3">
+              <button 
+                type="button" 
+                id="btn-start" 
+                onclick="startScrape()" 
+                class="flex-1 py-4 px-6 rounded-2xl bg-[#111c38] hover:bg-[#0a1226] text-white font-black text-sm shadow-card hover:shadow-card-hover flex items-center justify-center gap-2.5 transition-all transform active:scale-[0.98]"
+              >
+                <i class="fa-solid fa-play text-sm text-[#c1121f]"></i>
+                <span>Lancer le Sourcing Fournisseurs</span>
+              </button>
+
+              <button 
+                type="button" 
+                id="btn-stop" 
+                onclick="stopScrape()" 
+                disabled 
+                class="py-4 px-6 rounded-2xl bg-[#c1121f] hover:bg-[#a00f1a] text-white font-black text-sm shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+              >
+                <i class="fa-solid fa-stop text-sm"></i>
+                <span>Arrêter</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Live Monitor Column (5) -->
+        <div class="lg:col-span-5 space-y-6">
+          
+          <!-- Live Telemetry Card -->
+          <div class="acrow-card rounded-3xl p-6 space-y-5 border-l-4 border-l-[#111c38] border-r-4 border-r-[#c1121f]">
+            
+            <div class="flex items-center justify-between pb-3.5 border-b border-slate-200">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#111c38] flex items-center justify-center text-sm border border-blue-200">
+                  <i class="fa-solid fa-satellite-dish"></i>
+                </div>
+                <h2 class="text-base font-black text-[#111c38]">Moniteur en direct</h2>
+              </div>
+              <div id="live-badge" class="badge badge-sm bg-slate-100 text-slate-700 border border-slate-300 font-black px-2.5 py-1">
+                En attente
+              </div>
+            </div>
+
+            <!-- Big Progress Bar (Navy to Red) -->
+            <div class="space-y-2.5">
+              <div class="flex justify-between items-baseline">
+                <span class="text-xs text-[#111c38] font-black uppercase tracking-wider">Avancement de la mission</span>
+                <span id="stat-percentage" class="text-3xl font-black text-[#111c38] font-mono">0%</span>
+              </div>
+              
+              <div class="w-full bg-slate-100 rounded-full h-4 p-0.5 border border-slate-200 overflow-hidden shadow-inner">
+                <div id="progress-bar" class="h-full rounded-full transition-all duration-300 w-0 animate-acrow"></div>
+              </div>
+
+              <div class="flex items-center gap-2 pt-0.5">
+                <span class="w-2 h-2 rounded-full bg-[#c1121f] animate-ping"></span>
+                <p id="stat-step" class="text-xs text-slate-600 truncate font-semibold">
+                  Prêt à démarrer. Cliquez sur "Lancer l'extraction".
+                </p>
+              </div>
+            </div>
+
+            <!-- Live Metrics Grid -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                <div class="text-[11px] text-[#111c38] uppercase font-bold flex items-center gap-1.5">
+                  <i class="fa-solid fa-list-check text-[#111c38]"></i> Fiches extraites
+                </div>
+                <div class="text-2xl font-black text-[#111c38] font-mono">
+                  <span id="stat-current">0</span> <span class="text-xs text-slate-500 font-sans">/ <span id="stat-target">0</span></span>
+                </div>
+              </div>
+
+              <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                <div class="text-[11px] text-[#c1121f] uppercase font-bold flex items-center gap-1.5">
+                  <i class="fa-solid fa-stopwatch text-[#c1121f]"></i> Temps d'exécution
+                </div>
+                <div id="stat-time" class="text-2xl font-black text-[#c1121f] font-mono">
+                  0.0s
+                </div>
+              </div>
+            </div>
+
+            <!-- Currently Scraped Entity Box -->
+            <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+              <div class="text-[11px] text-[#111c38] font-black flex items-center gap-1.5">
+                <i class="fa-solid fa-building text-xs text-[#c1121f]"></i> Dernière entreprise extraite :
+              </div>
+              <div id="stat-last-entity" class="text-sm font-bold text-slate-800 truncate">
+                Aucune pour l'instant
+              </div>
+            </div>
+
+            <!-- Emergency Stop Bar in Live Monitor (Rouge) -->
+            <div id="live-stop-bar" class="hidden pt-1">
+              <button type="button" onclick="stopScrape()" class="w-full py-3 px-4 rounded-xl bg-[#c1121f] hover:bg-[#a00f1a] text-white font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md">
+                <i class="fa-solid fa-hand text-sm"></i>
+                <span>Arrêter l'extraction immédiatement</span>
+              </button>
+            </div>
+
+            <!-- Quick Go to Table Button when Done (Navy) -->
+            <div id="finished-actions" class="hidden pt-1">
+              <button onclick="loadAndOpenData(currentOutputFile)" class="w-full py-3 px-4 rounded-2xl bg-[#111c38] hover:bg-[#0a1226] text-white font-black text-sm shadow-md flex items-center justify-center gap-2 transition-all">
+                <i class="fa-solid fa-table"></i>
+                <span>Voir les résultats dans le tableau</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Live Terminal Output Console (Clean Dark Developer Console) -->
+          <div class="rounded-3xl overflow-hidden shadow-card flex flex-col h-72 border border-slate-300 bg-[#0c1222]">
+            <div class="px-4 py-3 bg-[#080d1a] border-b border-white/[0.08] flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2 text-white font-mono font-bold">
+                <span class="flex gap-1.5 mr-1">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#c1121f]"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-white"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#1e40af]"></span>
+                </span>
+                <span>Console Playwright</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="clearConsole()" class="text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] transition" title="Effacer la console">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <button onclick="copyConsoleLogs()" class="text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] transition" title="Copier tous les logs">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Scrollable Log Box -->
+            <div id="console-logs" class="flex-1 p-3.5 font-mono text-[11px] custom-scrollbar overflow-y-auto space-y-1.5 text-slate-300 bg-[#0c1222]">
+              <div class="text-slate-500 italic">En attente des messages d'exécution...</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 2: EXPLORATEUR DE DONNÉES / LEADS -->
+    <!-- ======================================================== -->
+    <div id="tab-data" class="hidden space-y-6 transition-all duration-300">
+
+      <!-- Header & File Selector Bar -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 acrow-card p-5 rounded-3xl shadow-sm">
+        <div class="flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#111c38] flex items-center justify-center text-lg border border-blue-200">
+            <i class="fa-solid fa-address-book"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-[#111c38]">Explorateur de Leads & Contacts</h2>
+            <p class="text-xs text-slate-500 font-semibold">Visualisez, filtrez et exportez vos données extraites</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- File select dropdown -->
+          <div class="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-300">
+            <i class="fa-regular fa-file-lines text-[#111c38] text-xs"></i>
+            <span class="text-xs font-bold text-[#111c38]">Fichier :</span>
+            <select id="select-data-file" onchange="loadFile(this.value)" class="bg-transparent text-xs font-black text-slate-800 focus:outline-none cursor-pointer max-w-[200px] truncate">
+              <option value="">Chargement des fichiers...</option>
+            </select>
+          </div>
+
+          <button onclick="refreshDataFiles()" class="btn btn-sm bg-slate-100 hover:bg-[#111c38] hover:text-white text-slate-700 border-slate-300 text-xs rounded-xl shadow-sm" title="Actualiser la liste">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Analytics Cards (White Background, Navy & Red Accents) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Total Leads -->
+        <div class="acrow-card rounded-3xl p-5 space-y-2 border-l-4 border-l-[#111c38]">
+          <div class="flex items-center justify-between text-[#111c38] text-xs font-black uppercase tracking-wider">
+            <span>Total Entreprises</span>
+            <div class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-[#111c38]">
+              <i class="fa-solid fa-shop"></i>
+            </div>
+          </div>
+          <div id="kpi-total" class="text-3xl font-black text-[#111c38] font-mono">0</div>
+          <div class="text-[11px] text-slate-500 font-medium">Extraits dans le dataset actuel</div>
+        </div>
+
+        <!-- Phone Leads (Red) -->
+        <div class="acrow-card rounded-3xl p-5 space-y-2 border-l-4 border-l-[#c1121f]">
+          <div class="flex items-center justify-between text-[#c1121f] text-xs font-black uppercase tracking-wider">
+            <span>Avec Téléphone</span>
+            <div class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-[#c1121f]">
+              <i class="fa-solid fa-phone"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span id="kpi-phone" class="text-3xl font-black text-[#c1121f] font-mono">0</span>
+            <span id="kpi-phone-pct" class="text-xs font-black text-red-600 font-mono">(0%)</span>
+          </div>
+          <div class="text-[11px] text-slate-500 font-medium">Prêts pour démarchage direct</div>
+        </div>
+
+        <!-- Website Leads (Navy) -->
+        <div class="acrow-card rounded-3xl p-5 space-y-2 border-l-4 border-l-blue-600">
+          <div class="flex items-center justify-between text-blue-700 text-xs font-black uppercase tracking-wider">
+            <span>Avec Site Web</span>
+            <div class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-700">
+              <i class="fa-solid fa-globe"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span id="kpi-website" class="text-3xl font-black text-blue-800 font-mono">0</span>
+            <span id="kpi-website-pct" class="text-xs font-black text-blue-600 font-mono">(0%)</span>
+          </div>
+          <div class="text-[11px] text-slate-500 font-medium">Présence digitale identifiée</div>
+        </div>
+
+        <!-- Average Rating (Gold / Slate) -->
+        <div class="acrow-card rounded-3xl p-5 space-y-2 border-l-4 border-l-amber-500">
+          <div class="flex items-center justify-between text-amber-600 text-xs font-black uppercase tracking-wider">
+            <span>Note Moyenne</span>
+            <div class="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500">
+              <i class="fa-solid fa-star"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span id="kpi-rating" class="text-3xl font-black text-amber-600 font-mono">0.0</span>
+            <span class="text-sm text-amber-500">★</span>
+          </div>
+          <div class="text-[11px] text-slate-500 font-medium">Satisfaction Google Maps</div>
+        </div>
+
+      </div>
+
+      <!-- Table Filter & Actions Bar -->
+      <div class="acrow-card rounded-3xl p-5 space-y-4 shadow-sm">
+        <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          
+          <!-- Search input -->
+          <div class="relative flex-1">
+            <i class="fa-solid fa-filter absolute left-3.5 top-3.5 text-[#111c38] text-xs"></i>
+            <input 
+              type="text" 
+              id="filter-search" 
+              oninput="applyFilters()" 
+              placeholder="Filtrer par nom, téléphone, ville, catégorie..." 
+              class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#111c38] focus:bg-white transition"
+            />
+          </div>
+
+          <!-- Quick Filters Pills -->
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button onclick="setFilter('all')" id="btn-flt-all" class="filter-chip px-3 py-1.5 rounded-xl text-xs font-black bg-[#111c38] text-white shadow-sm">Tous</button>
+            <button onclick="setFilter('phone')" id="btn-flt-phone" class="filter-chip px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#c1121f] hover:bg-red-50 border border-red-200">📞 Avec Tél</button>
+            <button onclick="setFilter('web')" id="btn-flt-web" class="filter-chip px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-blue-700 hover:bg-blue-50 border border-blue-200">🌐 Avec Site</button>
+            <button onclick="setFilter('rating4')" id="btn-flt-rating4" class="filter-chip px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-300">⭐ Note ≥ 4.0</button>
+          </div>
+
+          <!-- Action & Export Buttons -->
+          <div class="flex items-center gap-2">
+            
+            <!-- Copy Phone Numbers Button (Red) -->
+            <button onclick="copyAllPhones()" class="btn btn-sm bg-[#c1121f] hover:bg-[#a00f1a] text-white border-0 text-xs font-black gap-1.5 rounded-xl shadow-sm" title="Copier tous les numéros pour WhatsApp/SMS">
+              <i class="fa-solid fa-copy"></i>
+              <span>Copier Téléphones</span>
+            </button>
+
+            <!-- Export Dropdown (Navy) -->
+            <div class="dropdown dropdown-end">
+              <label tabindex="0" class="btn btn-sm bg-[#111c38] hover:bg-[#0a1226] text-white border-0 text-xs font-black gap-1.5 rounded-xl shadow-sm">
+                <i class="fa-solid fa-download text-[#c1121f]"></i>
+                <span>Exporter</span>
+                <i class="fa-solid fa-chevron-down text-[10px]"></i>
+              </label>
+              <ul tabindex="0" class="dropdown-content z-30 menu p-2 shadow-xl bg-white border border-slate-200 rounded-2xl w-52 mt-2 space-y-1">
+                <li>
+                  <button onclick="downloadCurrentFile('xlsx')" class="text-xs hover:bg-slate-100 text-slate-800 py-2 font-bold">
+                    <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                    <span>Format Excel (.xlsx)</span>
+                  </button>
+                </li>
+                <li>
+                  <button onclick="downloadCurrentFile('csv')" class="text-xs hover:bg-slate-100 text-slate-800 py-2 font-bold">
+                    <i class="fa-solid fa-file-csv text-[#111c38]"></i>
+                    <span>Format CSV (UTF-8 BOM)</span>
+                  </button>
+                </li>
+                <li>
+                  <button onclick="downloadCurrentFile('json')" class="text-xs hover:bg-slate-100 text-slate-800 py-2 font-bold">
+                    <i class="fa-solid fa-code text-[#c1121f]"></i>
+                    <span>Format JSON (.json)</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Table Display Count -->
+        <div class="flex items-center justify-between text-xs text-slate-500 px-1 pt-1 font-semibold">
+          <span>Affichage de <b id="lbl-shown-count" class="text-[#111c38] font-mono font-bold">0</b> sur <span id="lbl-total-count" class="font-mono">0</span> contacts</span>
+          <span class="text-[11px] text-slate-500 flex items-center gap-1 font-medium">
+            <i class="fa-solid fa-arrow-down-a-z text-[#111c38]"></i> Cliquez sur un en-tête pour trier
+          </span>
+        </div>
+
+        <!-- The Leads Table (Clean White Table) -->
+        <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white custom-scrollbar shadow-sm">
+          <table class="table table-sm w-full text-left">
+            <thead class="bg-slate-100 text-[#111c38] text-xs uppercase font-black border-b border-slate-200">
+              <tr>
+                <th class="w-12 text-center text-[#111c38]">#</th>
+                <th onclick="sortTable('name')" class="cursor-pointer hover:text-[#c1121f] transition-colors py-3.5">Établissement <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
+                <th onclick="sortTable('place_type')" class="cursor-pointer hover:text-[#c1121f] transition-colors">Catégorie</th>
+                <th onclick="sortTable('reviews_average')" class="cursor-pointer hover:text-[#c1121f] transition-colors text-center">Note & Avis <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
+                <th>Téléphone</th>
+                <th>Site Web</th>
+                <th>Adresse</th>
+                <th>Horaires</th>
+                <th class="text-center text-[#c1121f]">Détail</th>
+              </tr>
+            </thead>
+            <tbody id="table-body" class="text-xs divide-y divide-slate-100">
+              <tr>
+                <td colspan="9" class="text-center py-12 text-slate-500 font-semibold">
+                  <i class="fa-solid fa-spinner fa-spin mr-2 text-[#111c38]"></i> Chargement des données...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 3: FICHIERS & HISTORIQUE -->
+    <!-- ======================================================== -->
+    <div id="tab-files" class="hidden space-y-6 transition-all duration-300">
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 acrow-card p-5 rounded-3xl shadow-sm">
+        <div class="flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#111c38] flex items-center justify-center text-lg border border-blue-200">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-[#111c38]">Gestionnaire de Fichiers & Scrapings</h2>
+            <p class="text-xs text-slate-500 font-semibold">Tous les fichiers CSV générés dans votre espace de travail</p>
+          </div>
+        </div>
+        <button onclick="refreshDataFiles(true)" class="btn btn-sm bg-[#111c38] hover:bg-[#0a1226] text-white border-0 text-xs rounded-xl font-bold shadow-sm">
+          <i class="fa-solid fa-rotate-right mr-1"></i> Rafraîchir la liste
+        </button>
+      </div>
+
+      <!-- Files List Table -->
+      <div class="acrow-card rounded-3xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="table table-sm w-full">
+            <thead class="bg-slate-100 text-[#111c38] text-xs uppercase font-black border-b border-slate-200">
+              <tr>
+                <th class="py-3.5">Nom du fichier</th>
+                <th>Lignes / Leads</th>
+                <th>Taille</th>
+                <th>Dernière modification</th>
+                <th class="text-right pr-6">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="files-table-body" class="divide-y divide-slate-100 text-xs">
+              <tr>
+                <td colspan="5" class="text-center py-8 text-slate-500 font-medium">
+                  <i class="fa-solid fa-spinner fa-spin mr-2 text-[#111c38]"></i> Recherche des fichiers CSV...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 4: MÉDIAS (SCREENSHOTS & VIDÉOS) -->
+    <!-- ======================================================== -->
+    <div id="tab-media" class="hidden space-y-6 transition-all duration-300">
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 acrow-card p-5 rounded-3xl shadow-sm">
+        <div class="flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-2xl bg-red-50 text-[#c1121f] flex items-center justify-center text-lg border border-red-200">
+            <i class="fa-solid fa-film"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-[#111c38]">Captures d'Écran & Enregistrements Vidéo</h2>
+            <p class="text-xs text-slate-500 font-semibold">Aperçus visuels et démonstrations enregistrées</p>
+          </div>
+        </div>
+        <button onclick="loadMediaGallery()" class="btn btn-sm bg-[#111c38] hover:bg-[#0a1226] text-white border-0 text-xs rounded-xl font-bold shadow-sm">
+          <i class="fa-solid fa-rotate-right mr-1"></i> Actualiser les médias
+        </button>
+      </div>
+
+      <!-- Videos Section -->
+      <div class="space-y-3">
+        <h3 class="text-sm font-black text-[#111c38] flex items-center gap-2">
+          <i class="fa-solid fa-video text-[#c1121f]"></i> Vidéos de démonstration & enregistrements
+        </h3>
+        <div id="videos-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamic video cards -->
+        </div>
+      </div>
+
+      <!-- Screenshots Section -->
+      <div class="space-y-3 pt-4 border-t border-slate-200">
+        <h3 class="text-sm font-black text-[#111c38] flex items-center gap-2">
+          <i class="fa-solid fa-camera text-[#111c38]"></i> Captures d'écran (Screenshots)
+        </h3>
+        <div id="screenshots-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <!-- Dynamic screenshot thumbnails -->
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- CORPORATE FOOTER (ACROW LOGO & CHARTER) -->
+  <!-- ======================================================== -->
+  <footer class="mt-auto border-t border-slate-200 bg-white py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <img src="/static/img/logo.png" alt="ACROW Formwork Technology" class="h-10 w-auto object-contain" />
+        <div class="text-xs text-slate-500 font-medium">
+          <span class="font-black text-[#111c38]">ACROW DZ — Procurement Scraper</span> 
+          <span class="text-[#c1121f] font-bold">by Aymen</span> 
+          <span class="mx-1.5 text-slate-300">|</span> 
+          <span>Direction des Achats & Sourcing Fournisseurs</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 text-xs text-slate-500">
+        <span class="inline-flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>Moteur Chrome & Playwright Opérationnel</span>
+        </span>
+        <span class="hidden md:inline text-slate-300">•</span>
+        <span class="hidden md:inline font-mono text-[11px] text-slate-400">Charte : Bleu Nuit #111C38 & Rouge #C1121F</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: LEAD DETAIL VIEW -->
+  <!-- ======================================================== -->
+  <dialog id="lead-modal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box bg-white border border-slate-200 max-w-2xl text-slate-800 rounded-3xl shadow-2xl">
+      <div class="flex items-start justify-between border-b border-slate-200 pb-3.5">
+        <div>
+          <span id="m-type" class="badge badge-sm bg-[#111c38] text-white border-0 font-bold mb-1.5">Catégorie</span>
+          <h3 id="m-name" class="font-black text-xl text-[#111c38]">Nom de l'établissement</h3>
+        </div>
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost text-slate-400 hover:text-slate-800">✕</button>
+        </form>
+      </div>
+
+      <div class="py-4 space-y-4 text-xs sm:text-sm">
+        
+        <!-- Rating & Reviews -->
+        <div class="flex items-center justify-between bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+          <div class="flex items-center gap-2 text-amber-500 font-black text-lg">
+            <span id="m-rating">5.0</span>
+            <div id="m-stars" class="flex text-xs"></div>
+          </div>
+          <div class="text-slate-600 text-xs font-semibold">
+            <span id="m-reviews" class="font-bold text-[#111c38]">0</span> avis vérifiés sur Google Maps
+          </div>
+        </div>
+
+        <!-- Contact details -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="p-3.5 bg-red-50/50 rounded-2xl border border-red-200 space-y-1">
+            <div class="text-[11px] font-black text-[#c1121f] uppercase tracking-wider">Téléphone</div>
+            <div id="m-phone" class="font-bold text-slate-900 font-mono">-</div>
+          </div>
+          <div class="p-3.5 bg-blue-50/50 rounded-2xl border border-blue-200 space-y-1">
+            <div class="text-[11px] font-black text-[#111c38] uppercase tracking-wider">Site Web</div>
+            <div id="m-website" class="font-bold text-blue-700 truncate">-</div>
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+          <div class="text-[11px] font-black text-[#111c38] uppercase tracking-wider">Adresse complète</div>
+          <div id="m-address" class="text-slate-700 font-medium">-</div>
+          <div class="pt-1">
+            <a id="m-maps-link" href="#" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-[#111c38] hover:text-[#c1121f] font-bold transition">
+              <i class="fa-solid fa-map-pin text-[#c1121f]"></i> Ouvrir dans Google Maps
+            </a>
+          </div>
+        </div>
+
+        <!-- Hours & Services -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+            <div class="text-[11px] font-black text-[#111c38] uppercase tracking-wider">Horaires / Disponibilité</div>
+            <div id="m-hours" class="text-slate-700 font-medium">-</div>
+          </div>
+          <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+            <div class="text-[11px] font-black text-[#111c38] uppercase tracking-wider">Services proposés</div>
+            <div id="m-services" class="flex flex-wrap gap-1 text-[11px]">-</div>
+          </div>
+        </div>
+
+        <!-- Introduction snippet -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+          <div class="text-[11px] font-black text-[#111c38] uppercase tracking-wider">Présentation / Description</div>
+          <p id="m-intro" class="text-slate-600 italic text-xs leading-relaxed">-</p>
+        </div>
+
+      </div>
+
+      <div class="modal-action border-t border-slate-200 pt-3">
+        <form method="dialog">
+          <button class="btn btn-sm bg-[#111c38] hover:bg-[#0a1226] text-white border-0 font-bold">Fermer</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: BACKEND CONFIGURATION -->
+  <!-- ======================================================== -->
+  <dialog id="backend-modal" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box bg-white border border-slate-200 max-w-lg text-slate-800 rounded-3xl shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h3 class="font-black text-lg text-[#111c38] flex items-center gap-2">
+          <i class="fa-solid fa-server text-[#c1121f]"></i> Connexion au Serveur Backend
+        </h3>
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost text-slate-400 hover:text-slate-800">✕</button>
+        </form>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-600">
+        <p>
+          Sur Netlify, le site héberge uniquement l'interface graphique. Pour lancer un vrai scraping Google Maps avec Chrome, l'interface doit communiquer avec un serveur Python :
+        </p>
+        <div class="p-3 bg-blue-50 rounded-2xl border border-blue-200 text-[#111c38] space-y-1">
+          <div class="font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-laptop text-blue-700"></i> Option 1 : Utilisation Locale sur votre PC (Recommandé)
+          </div>
+          <p class="text-[11px] text-slate-600 leading-relaxed">
+            Fermez Netlify et ouvrez directement <strong>http://127.0.0.1:7860</strong> via le lanceur <code>lancer_plateforme.bat</code>. Tout fonctionne immédiatement avec votre navigateur Chrome !
+          </p>
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-slate-800 space-y-2">
+          <div class="font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-cloud text-[#c1121f]"></i> Option 2 : Backend Cloud (Render / Railway / VPS)
+          </div>
+          <p class="text-[11px] text-slate-500">
+            Si vous avez déployé le Dockerfile sur Render (ex: <code>https://acrow-scraper.onrender.com</code>), entrez son URL ici :
+          </p>
+          <input 
+            type="url" 
+            id="input-backend-url" 
+            placeholder="https://acrow-scraper.onrender.com" 
+            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs focus:outline-none focus:border-[#111c38] shadow-sm"
+          />
+        </div>
+      </div>
+
+      <div class="modal-action border-t border-slate-200 pt-3 flex justify-between items-center">
+        <button type="button" onclick="resetBackendUrl()" class="btn btn-sm btn-ghost text-slate-500 text-xs">Réinitialiser (Local)</button>
+        <div class="flex gap-2">
+          <form method="dialog">
+            <button class="btn btn-sm bg-slate-100 hover:bg-slate-200 text-slate-700 border-0">Annuler</button>
+          </form>
+          <button type="button" onclick="saveBackendUrl()" class="btn btn-sm bg-[#111c38] hover:bg-[#0a1226] text-white border-0 font-bold">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ======================================================== -->
+  <!-- FLOATING TOAST CONTAINER -->
+  <!-- ======================================================== -->
+  <div id="toast-container" class="toast toast-end toast-bottom z-50"></div>
+
+  <!-- ======================================================== -->
+  <!-- FRONTEND APPLICATION JAVASCRIPT -->
+  <!-- ======================================================== -->
+  <script>
+    let activeTab = 'studio';
+    let currentDataRows = [];
+    let filteredDataRows = [];
+    let currentOutputFile = 'result.csv';
+    let currentFilterType = 'all';
+    let sortColumn = 'name';
+    let sortAsc = true;
+    let eventSource = null;
+
+    // Backend URL handling (useful for Netlify -> Cloud Backend)
+    let apiBaseUrl = localStorage.getItem('acrow_backend_url') || '';
+
+    function apiUrl(path) {
+      if (!apiBaseUrl) return path;
+      return `${apiBaseUrl.replace(/\/+$/, '')}${path}`;
+    }
+
+    async function safeFetchJson(endpoint, options = {}) {
+      const url = apiUrl(endpoint);
+      let res;
+      try {
+        res = await fetch(url, options);
+      } catch (networkErr) {
+        throw new Error(`Serveur injoignable : vérifiez que le backend Python est démarré (${networkErr.message})`);
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await res.text();
+        if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+          throw new Error("Serveur Python non connecté : vous êtes sur l'interface statique Netlify. Pour lancer une extraction avec Chrome, ouvrez l'application en local (lancer_plateforme.bat) ou connectez un backend.");
+        }
+        throw new Error(`Réponse non-JSON du serveur (${res.status} ${res.statusText})`);
+      }
+      return await res.json();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Show cloud warning banner if on Netlify without custom backend
+      if (window.location.hostname.includes('netlify.app') && !apiBaseUrl) {
+        document.getElementById('cloud-banner')?.classList.remove('hidden');
+      }
+
+      initSSE();
+      refreshDataFiles();
+      loadMediaGallery();
+      checkInitialStatus();
+
+      // Periodic status synchronization polling (every 2s)
+      setInterval(async () => {
+        try {
+          const state = await safeFetchJson('/api/scrape/status');
+          updateUIState(state);
+        } catch (e) {}
+      }, 2000);
+    });
+
+    // -------------------------------------------------------------
+    // TAB NAVIGATION
+    // -------------------------------------------------------------
+    function switchTab(tabName) {
+      activeTab = tabName;
+      ['studio', 'data', 'files', 'media'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabName) {
+          el.classList.remove('hidden');
+          if (btn) {
+            btn.className = 'nav-tab px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 bg-[#111c38] text-white shadow-sm';
+          }
+        } else {
+          el.classList.add('hidden');
+          if (btn) {
+            btn.className = 'nav-tab px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70';
+          }
+        }
+      });
+    }
+
+    // -------------------------------------------------------------
+    // FORM CONTROLS & HELPERS
+    // -------------------------------------------------------------
+    function setQuery(query, total, isVisual) {
+      document.getElementById('input-search').value = query;
+      setTotalCount(total);
+      selectMode(isVisual ? 'visual' : 'headless');
+      autoGenerateFilename();
+      showToast(`Paramètres appliqués : "${query}"`, 'info');
+    }
+
+    function setTotalCount(count) {
+      document.getElementById('range-total').value = count;
+      document.getElementById('input-total').value = count;
+      document.getElementById('label-total').innerText = count;
+    }
+
+    function onTotalChange(val) {
+      document.getElementById('range-total').value = val;
+      document.getElementById('input-total').value = val;
+      document.getElementById('label-total').innerText = val;
+    }
+
+    function selectMode(mode) {
+      const isVisual = (mode === 'visual');
+      document.querySelector(`input[name="browser-mode"][value="${mode}"]`).checked = true;
+      const visualCard = document.getElementById('mode-card-visual');
+      const headlessCard = document.getElementById('mode-card-headless');
+      if (isVisual) {
+        visualCard.className = 'cursor-pointer border-2 border-[#111c38] bg-blue-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm';
+        headlessCard.className = 'cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#c1121f]/50';
+      } else {
+        headlessCard.className = 'cursor-pointer border-2 border-[#c1121f] bg-red-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm';
+        visualCard.className = 'cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#111c38]/50';
+      }
+    }
+
+    function toggleAdvancedOptions() {
+      const adv = document.getElementById('advanced-options');
+      const arrow = document.getElementById('advanced-arrow');
+      if (adv.classList.contains('hidden')) {
+        adv.classList.remove('hidden');
+        arrow.classList.add('rotate-90');
+      } else {
+        adv.classList.add('hidden');
+        arrow.classList.remove('rotate-90');
+      }
+    }
+
+    function autoGenerateFilename() {
+      const query = document.getElementById('input-search').value.trim();
+      const slug = query.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'resultats';
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const filename = `${slug}_${dateStr}.csv`;
+      document.getElementById('input-output-file').value = filename;
+    }
+
+    // -------------------------------------------------------------
+    // SSE REAL-TIME MONITORING
+    // -------------------------------------------------------------
+    function initSSE() {
+      if (eventSource) {
+        eventSource.close();
+      }
+      try {
+        const sseUrl = apiUrl('/api/scrape/stream');
+        eventSource = new EventSource(sseUrl);
+
+        eventSource.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            handleSSEMessage(payload);
+          } catch (err) {
+            console.error('Error parsing SSE event:', err);
+          }
+        };
+
+        eventSource.onerror = (err) => {
+          // If on netlify without backend, ignore SSE errors silently
+        };
+      } catch (e) {}
+    }
+
+    function handleSSEMessage(msg) {
+      if (msg.type === 'init') {
+        updateUIState(msg.state);
+        if (msg.logs && msg.logs.length > 0) {
+          msg.logs.forEach(l => appendLog(l.data.message, l.data.level, l.timestamp));
+        }
+      } else if (msg.type === 'status') {
+        updateUIState(msg.data);
+      } else if (msg.type === 'log') {
+        appendLog(msg.data.message, msg.data.level, msg.timestamp);
+      }
+    }
+
+    async function checkInitialStatus() {
+      try {
+        const state = await safeFetchJson('/api/scrape/status');
+        updateUIState(state);
+      } catch (e) {
+        if (window.location.hostname.includes('netlify.app') && !apiBaseUrl) {
+          document.getElementById('cloud-banner')?.classList.remove('hidden');
+        }
+      }
+    }
+
+    function updateUIState(state) {
+      const isRunning = state.status === 'running';
+      const btnStart = document.getElementById('btn-start');
+      const btnStop = document.getElementById('btn-stop');
+      const statusPill = document.getElementById('status-pill');
+      const statusText = document.getElementById('status-text');
+      const liveBadge = document.getElementById('live-badge');
+      const progressBar = document.getElementById('progress-bar');
+      const statPct = document.getElementById('stat-percentage');
+      const statStep = document.getElementById('stat-step');
+      const statCurrent = document.getElementById('stat-current');
+      const statTarget = document.getElementById('stat-target');
+      const statTime = document.getElementById('stat-time');
+      const statLastEntity = document.getElementById('stat-last-entity');
+      const finishedActions = document.getElementById('finished-actions');
+      const liveStopBar = document.getElementById('live-stop-bar');
+
+      currentOutputFile = state.output_file || 'result.csv';
+
+      // Button states
+      btnStart.disabled = isRunning;
+      btnStop.disabled = !isRunning;
+      if (isRunning) {
+        btnStop.classList.remove('opacity-40');
+      } else {
+        btnStop.classList.add('opacity-40');
+      }
+
+      // Emergency stop bar visibility
+      if (liveStopBar) {
+        if (isRunning) liveStopBar.classList.remove('hidden');
+        else liveStopBar.classList.add('hidden');
+      }
+
+      if (isRunning) {
+        btnStart.classList.add('opacity-50', 'pointer-events-none');
+        statusPill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-50 border border-red-200 text-[#c1121f] text-xs font-black shadow-sm';
+        statusText.innerText = 'Extraction en cours...';
+        liveBadge.className = 'badge badge-sm bg-[#c1121f] text-white border-0 font-black';
+        liveBadge.innerText = '⚡ EN DIRECT';
+        finishedActions.classList.add('hidden');
+      } else if (state.status === 'completed') {
+        btnStart.classList.remove('opacity-50', 'pointer-events-none');
+        statusPill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-black shadow-sm';
+        statusText.innerText = 'Terminé avec succès';
+        liveBadge.className = 'badge badge-sm bg-emerald-600 text-white border-0 font-bold';
+        liveBadge.innerText = 'Terminé';
+        finishedActions.classList.remove('hidden');
+      } else if (state.status === 'stopped') {
+        btnStart.classList.remove('opacity-50', 'pointer-events-none');
+        statusPill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-300 text-slate-700 text-xs font-black';
+        statusText.innerText = 'Arrêté';
+        liveBadge.className = 'badge badge-sm bg-slate-200 text-slate-800 border border-slate-300';
+        liveBadge.innerText = 'Arrêté';
+      } else {
+        btnStart.classList.remove('opacity-50', 'pointer-events-none');
+        statusPill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold';
+        statusText.innerText = 'Système Prêt';
+        liveBadge.className = 'badge badge-sm bg-slate-100 text-slate-700 border border-slate-300';
+        liveBadge.innerText = 'En attente';
+      }
+
+      // Stats
+      statPct.innerText = `${state.percentage}%`;
+      progressBar.style.width = `${state.percentage}%`;
+      statStep.innerText = state.current_step || 'En attente...';
+      statCurrent.innerText = state.current_count;
+      statTarget.innerText = state.total_target;
+      statTime.innerText = `${state.elapsed_seconds}s`;
+      if (state.current_name) {
+        statLastEntity.innerText = state.current_name;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // SCRAPING ACTIONS: START & STOP
+    // -------------------------------------------------------------
+    async function startScrape() {
+      const search = document.getElementById('input-search').value.trim();
+      if (!search) {
+        showToast('Veuillez saisir un terme de recherche.', 'error');
+        return;
+      }
+
+      const total = parseInt(document.getElementById('input-total').value, 10);
+      const isHeadless = document.querySelector('input[name="browser-mode"]:checked').value === 'headless';
+      const slowMo = parseInt(document.getElementById('range-slowmo').value, 10);
+      const outputFile = document.getElementById('input-output-file').value.trim() || 'result.csv';
+      const append = document.getElementById('check-append').checked;
+      const screenshots = document.getElementById('check-screenshots').checked;
+      const recordVideo = document.getElementById('check-video').checked;
+
+      currentOutputFile = outputFile;
+
+      // Optimistic immediate UI transition
+      const btnStart = document.getElementById('btn-start');
+      const btnStop = document.getElementById('btn-stop');
+      btnStart.disabled = true;
+      btnStart.classList.add('opacity-50', 'pointer-events-none');
+      btnStop.disabled = false;
+      btnStop.classList.remove('opacity-40');
+
+      const liveStopBar = document.getElementById('live-stop-bar');
+      if (liveStopBar) liveStopBar.classList.remove('hidden');
+
+      const statusPill = document.getElementById('status-pill');
+      statusPill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-[#111c38] text-xs font-black pulse-navy';
+      document.getElementById('status-text').innerText = 'Démarrage...';
+      const liveBadge = document.getElementById('live-badge');
+      liveBadge.className = 'badge badge-sm bg-[#c1121f] text-white border-0 font-bold';
+      liveBadge.innerText = '⚡ EN DIRECT';
+
+      try {
+        const data = await safeFetchJson('/api/scrape/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            search: search,
+            total: total,
+            headless: isHeadless,
+            slow_mo: slowMo,
+            output_file: outputFile,
+            append: append,
+            screenshots: screenshots,
+            record_video: recordVideo
+          })
+        });
+        if (data.success) {
+          showToast('Sourcing lancé avec succès !', 'success');
+          if (data.state) updateUIState(data.state);
+        } else {
+          showToast(data.error || 'Erreur lors du lancement.', 'error');
+          btnStart.disabled = false;
+          btnStart.classList.remove('opacity-50', 'pointer-events-none');
+          btnStop.disabled = true;
+          btnStop.classList.add('opacity-40');
+          if (liveStopBar) liveStopBar.classList.add('hidden');
+        }
+      } catch (e) {
+        showToast(e.message, 'error');
+        if (e.message.includes('Serveur Python non connecté')) {
+          openBackendModal();
+        }
+        btnStart.disabled = false;
+        btnStart.classList.remove('opacity-50', 'pointer-events-none');
+        btnStop.disabled = true;
+        btnStop.classList.add('opacity-40');
+        if (liveStopBar) liveStopBar.classList.add('hidden');
+      }
+    }
+
+    async function stopScrape() {
+      const btnStop = document.getElementById('btn-stop');
+      const originalHtml = btnStop.innerHTML;
+      btnStop.disabled = true;
+      btnStop.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Arrêt...';
+
+      const liveStopBtn = document.querySelector('#live-stop-bar button');
+      if (liveStopBtn) {
+        liveStopBtn.disabled = true;
+        liveStopBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Arrêt en cours...';
+      }
+
+      try {
+        const data = await safeFetchJson('/api/scrape/stop', { method: 'POST' });
+        if (data.success) {
+          showToast('🛑 Scraping arrêté avec succès !', 'warning');
+          const btnStart = document.getElementById('btn-start');
+          btnStart.disabled = false;
+          btnStart.classList.remove('opacity-50', 'pointer-events-none');
+          btnStop.disabled = true;
+          btnStop.classList.add('opacity-40');
+
+          const liveStopBar = document.getElementById('live-stop-bar');
+          if (liveStopBar) liveStopBar.classList.add('hidden');
+
+          const statusPill = document.getElementById('status-pill');
+          statusPill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-300 text-slate-700 text-xs font-black';
+          document.getElementById('status-text').innerText = 'Arrêté';
+
+          const liveBadge = document.getElementById('live-badge');
+          liveBadge.className = 'badge badge-sm bg-slate-200 text-slate-800 border border-slate-300';
+          liveBadge.innerText = 'Arrêté';
+
+          document.getElementById('stat-step').innerText = 'Scraping interrompu par l\'utilisateur.';
+        } else {
+          showToast(data.error || 'Erreur lors de l\'arrêt.', 'error');
+          btnStop.disabled = false;
+        }
+      } catch (e) {
+        showToast(`Erreur réseau: ${e.message}`, 'error');
+        btnStop.disabled = false;
+      } finally {
+        btnStop.innerHTML = originalHtml;
+        if (liveStopBtn) {
+          liveStopBtn.disabled = false;
+          liveStopBtn.innerHTML = '<i class="fa-solid fa-hand text-sm"></i> Arrêter l\'extraction immédiatement';
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
+    // CONSOLE LOGS
+    // -------------------------------------------------------------
+    function appendLog(message, level = 'info', timeStr = '') {
+      const box = document.getElementById('console-logs');
+      if (box.children.length === 1 && box.children[0].classList.contains('italic')) {
+        box.innerHTML = '';
+      }
+
+      const el = document.createElement('div');
+      el.className = 'flex items-start gap-2 py-0.5 leading-relaxed font-mono';
+
+      let colorClass = 'text-slate-300';
+      let icon = '<i class="fa-solid fa-angle-right text-[#38bdf8] text-[10px] mt-1"></i>';
+      
+      if (level === 'success' || message.includes('✅') || message.includes('Saved')) {
+        colorClass = 'text-emerald-300 font-bold bg-emerald-950/60 px-1 rounded';
+        icon = '<i class="fa-solid fa-check text-emerald-400 text-[10px] mt-1"></i>';
+      } else if (level === 'error' || message.includes('❌') || message.includes('Exception')) {
+        colorClass = 'text-red-400 font-bold';
+        icon = '<i class="fa-solid fa-xmark text-red-500 text-[10px] mt-1"></i>';
+      } else if (level === 'warn' || message.includes('🛑') || message.includes('WARNING')) {
+        colorClass = 'text-amber-300 font-medium';
+        icon = '<i class="fa-solid fa-triangle-exclamation text-amber-400 text-[10px] mt-1"></i>';
+      } else if (message.includes('EXTRACTED')) {
+        colorClass = 'text-blue-300 font-bold';
+        icon = '<i class="fa-solid fa-cloud-arrow-down text-blue-400 text-[10px] mt-1"></i>';
+      }
+
+      const time = timeStr || new Date().toLocaleTimeString();
+      el.innerHTML = `
+        <span class="text-slate-500 select-none text-[10px] shrink-0 font-mono">[${time}]</span>
+        <span class="shrink-0">${icon}</span>
+        <span class="${colorClass} break-all">${escapeHtml(message)}</span>
+      `;
+
+      box.appendChild(el);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function clearConsole() {
+      document.getElementById('console-logs').innerHTML = '<div class="text-slate-500 italic">Console effacée.</div>';
+    }
+
+    function copyConsoleLogs() {
+      const box = document.getElementById('console-logs');
+      navigator.clipboard.writeText(box.innerText).then(() => {
+        showToast('Logs copiés dans le presse-papier !', 'success');
+      });
+    }
+
+    // -------------------------------------------------------------
+    // DATA TABLE & LEADS VIEW
+    // -------------------------------------------------------------
+    async function refreshDataFiles(openFilesTab = false) {
+      try {
+        const data = await safeFetchJson('/api/files');
+        if (data.success) {
+          populateFileDropdown(data.files);
+          populateFilesTable(data.files);
+          if (openFilesTab) {
+            showToast(`${data.files.length} fichiers CSV indexés.`, 'info');
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching files:', e);
+      }
+    }
+
+    function populateFileDropdown(files) {
+      const select = document.getElementById('select-data-file');
+      select.innerHTML = '';
+      if (!files || files.length === 0) {
+        select.innerHTML = '<option value="">Aucun fichier CSV</option>';
+        return;
+      }
+
+      files.forEach((f) => {
+        const opt = document.createElement('option');
+        opt.value = f.filename;
+        opt.innerText = `${f.filename} (${f.row_count} contacts — ${f.size_str})`;
+        select.appendChild(opt);
+      });
+
+      if (select.options.length > 0) {
+        const target = currentOutputFile || select.options[0].value;
+        const exists = Array.from(select.options).some(o => o.value === target);
+        select.value = exists ? target : select.options[0].value;
+        loadFile(select.value);
+      }
+    }
+
+    async function loadFile(filename) {
+      if (!filename) return;
+      currentOutputFile = filename;
+
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-12 text-slate-500 font-bold"><i class="fa-solid fa-spinner fa-spin mr-2 text-[#111c38]"></i> Chargement des données de ${filename}...</td></tr>`;
+
+      try {
+        const data = await safeFetchJson(`/api/files/${encodeURIComponent(filename)}`);
+        if (data.success) {
+          currentDataRows = data.rows || [];
+          
+          // Update KPI Cards
+          document.getElementById('kpi-total').innerText = data.stats.total;
+          document.getElementById('kpi-phone').innerText = data.stats.with_phone;
+          document.getElementById('kpi-phone-pct').innerText = `(${data.stats.phone_percentage}%)`;
+          document.getElementById('kpi-website').innerText = data.stats.with_website;
+          document.getElementById('kpi-website-pct').innerText = `(${data.stats.website_percentage}%)`;
+          document.getElementById('kpi-rating').innerText = data.stats.avg_rating > 0 ? data.stats.avg_rating : 'N/A';
+          document.getElementById('nav-leads-badge').innerText = data.stats.total;
+
+          applyFilters();
+        } else {
+          tbody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-[#c1121f]">Erreur: ${data.error}</td></tr>`;
+        }
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-[#c1121f]">${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
+
+    function loadAndOpenData(filename) {
+      switchTab('data');
+      const select = document.getElementById('select-data-file');
+      select.value = filename;
+      loadFile(filename);
+    }
+
+    function setFilter(type) {
+      currentFilterType = type;
+      ['all', 'phone', 'web', 'rating4'].forEach(t => {
+        const btn = document.getElementById(`btn-flt-${t}`);
+        if (t === type) {
+          btn.className = 'filter-chip px-3 py-1.5 rounded-xl text-xs font-black bg-[#111c38] text-white shadow-sm';
+        } else {
+          btn.className = 'filter-chip px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-300';
+        }
+      });
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const query = document.getElementById('filter-search').value.toLowerCase().trim();
+
+      filteredDataRows = currentDataRows.filter(row => {
+        if (query) {
+          const combined = [
+            row.name, row.address, row.phone_number, row.website, row.place_type, row.introduction
+          ].join(' ').toLowerCase();
+          if (!combined.includes(query)) return false;
+        }
+
+        if (currentFilterType === 'phone') {
+          return row.phone_number && String(row.phone_number).trim() !== '';
+        } else if (currentFilterType === 'web') {
+          return row.website && String(row.website).trim() !== '';
+        } else if (currentFilterType === 'rating4') {
+          return parseFloat(row.reviews_average) >= 4.0;
+        }
+
+        return true;
+      });
+
+      sortData();
+      renderTable();
+    }
+
+    function sortTable(column) {
+      if (sortColumn === column) {
+        sortAsc = !sortAsc;
+      } else {
+        sortColumn = column;
+        sortAsc = true;
+      }
+      sortData();
+      renderTable();
+    }
+
+    function sortData() {
+      filteredDataRows.sort((a, b) => {
+        let valA = a[sortColumn] ?? '';
+        let valB = b[sortColumn] ?? '';
+
+        if (sortColumn === 'reviews_average' || sortColumn === 'reviews_count') {
+          valA = parseFloat(valA) || 0;
+          valB = parseFloat(valB) || 0;
+        } else {
+          valA = String(valA).toLowerCase();
+          valB = String(valB).toLowerCase();
+        }
+
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+      });
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('table-body');
+      document.getElementById('lbl-shown-count').innerText = filteredDataRows.length;
+      document.getElementById('lbl-total-count').innerText = currentDataRows.length;
+
+      if (filteredDataRows.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="text-center py-16 text-slate-400">
+              <i class="fa-solid fa-magnifying-glass text-3xl mb-3 block text-[#111c38]"></i>
+              <div class="text-sm font-bold text-slate-800">Aucun résultat trouvé</div>
+              <div class="text-xs text-slate-500 mt-1">Modifiez vos termes de recherche ou réinitialisez les filtres.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filteredDataRows.map((row, idx) => {
+        const rating = parseFloat(row.reviews_average) || 0;
+        const reviewsCount = row.reviews_count || '';
+        const phone = (row.phone_number || '').trim();
+        const website = (row.website || '').trim();
+        const websiteUrl = website ? (website.startsWith('http') ? website : `https://${website}`) : '';
+        const category = row.place_type || 'Établissement';
+        const initial = (row.name || 'E').trim().charAt(0).toUpperCase();
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="text-center font-mono text-[#111c38] font-black">${idx + 1}</td>
+            
+            <!-- Company Name with Avatar Icon -->
+            <td class="font-bold text-slate-900 max-w-[220px]">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-[#111c38] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+                  ${escapeHtml(initial)}
+                </div>
+                <div class="truncate cursor-pointer hover:text-[#c1121f] transition" onclick="openLeadModal(${idx})" title="${escapeAttr(row.name)}">
+                  ${escapeHtml(row.name)}
+                </div>
+              </div>
+            </td>
+
+            <!-- Category Badge -->
+            <td>
+              <span class="badge badge-sm bg-slate-100 text-slate-700 border border-slate-300 font-bold truncate max-w-[130px]">
+                ${escapeHtml(category)}
+              </span>
+            </td>
+
+            <!-- Rating & Reviews -->
+            <td class="text-center">
+              ${rating > 0 ? `
+                <div class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-lg font-black text-[11px] border border-amber-200">
+                  <span class="font-mono">${rating.toFixed(1)}</span>
+                  <i class="fa-solid fa-star text-[9px] text-amber-500"></i>
+                  ${reviewsCount ? `<span class="text-slate-500 font-normal">(${reviewsCount})</span>` : ''}
+                </div>
+              ` : '<span class="text-slate-400 font-mono">-</span>'}
+            </td>
+
+            <!-- Phone Number (Red) -->
+            <td>
+              ${phone ? `
+                <div class="flex items-center gap-2">
+                  <a href="tel:${phone}" class="text-[#c1121f] hover:underline font-mono text-xs font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-phone text-[10px]"></i> ${escapeHtml(phone)}
+                  </a>
+                  <button onclick="copyText('${escapeAttr(phone)}', 'Numéro')" class="text-slate-400 hover:text-slate-800 transition" title="Copier le numéro">
+                    <i class="fa-regular fa-copy text-xs"></i>
+                  </button>
+                </div>
+              ` : '<span class="text-slate-400 font-mono">-</span>'}
+            </td>
+
+            <!-- Website Link (Navy) -->
+            <td class="max-w-[150px]">
+              ${website ? `
+                <a href="${websiteUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-700 hover:underline flex items-center gap-1.5 truncate text-xs font-bold">
+                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px] shrink-0 text-blue-600"></i>
+                  <span class="truncate">${escapeHtml(website.replace(/^https?:\/\//, ''))}</span>
+                </a>
+              ` : '<span class="text-slate-400 font-mono">-</span>'}
+            </td>
+
+            <!-- Full Address -->
+            <td class="max-w-[210px]">
+              <div class="truncate text-slate-600 text-xs font-medium" title="${escapeAttr(row.address)}">
+                ${escapeHtml(row.address || '-')}
+              </div>
+            </td>
+
+            <!-- Hours Status -->
+            <td>
+              <span class="text-slate-800 text-xs truncate max-w-[120px] block font-semibold">
+                ${escapeHtml(row.opens_at || '-')}
+              </span>
+            </td>
+
+            <!-- Action Modal -->
+            <td class="text-center">
+              <button onclick="openLeadModal(${idx})" class="btn btn-ghost btn-xs text-[#111c38] hover:bg-slate-100 rounded-lg" title="Voir la fiche détaillée">
+                <i class="fa-solid fa-id-card text-sm"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openLeadModal(idx) {
+      const row = filteredDataRows[idx];
+      if (!row) return;
+
+      document.getElementById('m-name').innerText = row.name || 'Sans nom';
+      document.getElementById('m-type').innerText = row.place_type || 'Établissement';
+      
+      const rating = parseFloat(row.reviews_average) || 0;
+      document.getElementById('m-rating').innerText = rating > 0 ? rating.toFixed(1) : 'Non noté';
+      document.getElementById('m-reviews').innerText = row.reviews_count || '0';
+
+      const starsEl = document.getElementById('m-stars');
+      starsEl.innerHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        if (i <= Math.floor(rating)) {
+          starsEl.innerHTML += '<i class="fa-solid fa-star text-amber-500 mr-0.5"></i>';
+        } else if (i === Math.ceil(rating) && rating % 1 >= 0.5) {
+          starsEl.innerHTML += '<i class="fa-solid fa-star-half-stroke text-amber-500 mr-0.5"></i>';
+        } else {
+          starsEl.innerHTML += '<i class="fa-regular fa-star text-slate-300 mr-0.5"></i>';
+        }
+      }
+
+      const phoneEl = document.getElementById('m-phone');
+      if (row.phone_number) {
+        phoneEl.innerHTML = `
+          <a href="tel:${row.phone_number}" class="text-[#c1121f] hover:underline font-mono font-bold">${escapeHtml(row.phone_number)}</a>
+          <button onclick="copyText('${escapeAttr(row.phone_number)}', 'Numéro')" class="ml-2 text-slate-500 hover:text-slate-800"><i class="fa-regular fa-copy"></i></button>
+        `;
+      } else {
+        phoneEl.innerText = 'Non renseigné';
+      }
+
+      const webEl = document.getElementById('m-website');
+      if (row.website) {
+        const url = row.website.startsWith('http') ? row.website : `https://${row.website}`;
+        webEl.innerHTML = `<a href="${url}" target="_blank" class="text-blue-700 hover:underline flex items-center gap-1.5 font-bold">${escapeHtml(row.website)} <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></a>`;
+      } else {
+        webEl.innerText = 'Non renseigné';
+      }
+
+      document.getElementById('m-address').innerText = row.address || 'Non renseignée';
+      const mapsQuery = encodeURIComponent(`${row.name} ${row.address}`);
+      document.getElementById('m-maps-link').href = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
+
+      document.getElementById('m-hours').innerText = row.opens_at || 'Horaires non précisés';
+
+      const srvEl = document.getElementById('m-services');
+      srvEl.innerHTML = `
+        <span class="badge badge-sm ${row.store_shopping === 'Yes' ? 'bg-[#111c38] text-white' : 'badge-ghost text-slate-400'}">Boutique</span>
+        <span class="badge badge-sm ${row.in_store_pickup === 'Yes' ? 'bg-[#111c38] text-white' : 'badge-ghost text-slate-400'}">Retrait</span>
+        <span class="badge badge-sm ${row.store_delivery === 'Yes' ? 'bg-[#c1121f] text-white' : 'badge-ghost text-slate-400'}">Livraison</span>
+      `;
+
+      document.getElementById('m-intro').innerText = (row.introduction && row.introduction !== 'None Found') ? row.introduction : 'Aucune description disponible pour cet établissement.';
+
+      document.getElementById('lead-modal').showModal();
+    }
+
+    // -------------------------------------------------------------
+    // EXPORT & COPY UTILS
+    // -------------------------------------------------------------
+    function downloadCurrentFile(format) {
+      if (!currentOutputFile) {
+        showToast('Aucun fichier sélectionné.', 'error');
+        return;
+      }
+      window.location.href = `/api/export/${encodeURIComponent(currentOutputFile)}/${format}`;
+      showToast(`Téléchargement au format .${format} lancé !`, 'info');
+    }
+
+    function copyAllPhones() {
+      const phones = filteredDataRows
+        .map(r => (r.phone_number || '').trim())
+        .filter(p => p.length > 0);
+
+      if (phones.length === 0) {
+        showToast('Aucun numéro de téléphone à copier dans les données filtrées.', 'warning');
+        return;
+      }
+
+      const text = phones.join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(`✅ ${phones.length} numéros de téléphone copiés dans le presse-papier !`, 'success');
+      });
+    }
+
+    function copyText(str, label = 'Texte') {
+      navigator.clipboard.writeText(str).then(() => {
+        showToast(`${label} copié !`, 'success');
+      });
+    }
+
+    // -------------------------------------------------------------
+    // FILES MANAGEMENT TAB
+    // -------------------------------------------------------------
+    function populateFilesTable(files) {
+      const tbody = document.getElementById('files-table-body');
+      if (!files || files.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400 font-medium">Aucun fichier CSV généré pour l'instant.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = files.map(f => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="font-bold text-slate-900 flex items-center gap-2.5 py-3.5">
+            <i class="fa-solid fa-file-csv text-[#111c38] text-lg"></i>
+            <span>${escapeHtml(f.filename)}</span>
+          </td>
+          <td>
+            <span class="badge badge-sm bg-[#c1121f] text-white border-0 font-bold font-mono">${f.row_count} contacts</span>
+          </td>
+          <td class="font-mono text-slate-600">${f.size_str}</td>
+          <td class="text-slate-600 font-medium">${f.modified}</td>
+          <td class="text-right space-x-1.5 pr-4">
+            <button onclick="loadAndOpenData('${escapeAttr(f.filename)}')" class="btn btn-xs bg-[#111c38] hover:bg-[#0a1226] text-white border-0 rounded-lg font-bold shadow-sm" title="Ouvrir dans le tableau">
+              <i class="fa-solid fa-table mr-1"></i> Ouvrir
+            </button>
+            <a href="/api/export/${encodeURIComponent(f.filename)}/xlsx" class="btn btn-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg shadow-sm" title="Télécharger Excel">
+              <i class="fa-solid fa-file-excel text-emerald-600"></i>
+            </a>
+            <a href="/api/export/${encodeURIComponent(f.filename)}/csv" class="btn btn-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg shadow-sm" title="Télécharger CSV">
+              <i class="fa-solid fa-file-csv text-[#111c38]"></i>
+            </a>
+            <button onclick="deleteFilePrompt('${escapeAttr(f.filename)}')" class="btn btn-xs btn-ghost text-[#c1121f] hover:bg-red-50 rounded-lg" title="Supprimer">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function deleteFilePrompt(filename) {
+      if (!confirm(`Voulez-vous vraiment supprimer définitivement le fichier "${filename}" ?`)) {
+        return;
+      }
+      try {
+        const data = await safeFetchJson(`/api/files/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+        if (data.success) {
+          showToast(`Fichier ${filename} supprimé.`, 'info');
+          refreshDataFiles();
+        } else {
+          showToast(`Erreur: ${data.error}`, 'error');
+        }
+      } catch (e) {
+        showToast(`Erreur lors de la suppression: ${e.message}`, 'error');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // MEDIA TAB (SCREENSHOTS & VIDEOS)
+    // -------------------------------------------------------------
+    async function loadMediaGallery() {
+      try {
+        const data = await safeFetchJson('/api/media');
+        
+        // Render Videos
+        const vidGrid = document.getElementById('videos-grid');
+        if (!data.videos || data.videos.length === 0) {
+          vidGrid.innerHTML = '<div class="col-span-full p-8 text-center text-slate-400 border border-slate-200 rounded-3xl bg-white font-medium">Aucune vidéo enregistrée pour le moment. Cochez "Enregistrer la vidéo" lors d\'un scraping !</div>';
+        } else {
+          vidGrid.innerHTML = data.videos.map(v => `
+            <div class="acrow-card rounded-3xl overflow-hidden shadow-sm p-5 space-y-3.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-black text-[#111c38] truncate max-w-[220px]" title="${escapeAttr(v.name)}">${escapeHtml(v.name)}</span>
+                <span class="badge badge-sm bg-[#111c38] text-white font-mono">${v.size_mb} MB</span>
+              </div>
+              <video controls class="w-full rounded-2xl bg-black aspect-video max-h-64 shadow-inner" preload="metadata">
+                <source src="${v.url}" type="video/mp4">
+                Votre navigateur ne prend pas en charge la balise vidéo.
+              </video>
+              <div class="text-[11px] text-slate-500 flex justify-between font-semibold">
+                <span>Modifié le : ${v.modified}</span>
+                <a href="${v.url}" download class="text-[#111c38] hover:text-[#c1121f] font-bold"><i class="fa-solid fa-download mr-1"></i> Télécharger</a>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Render Screenshots
+        const scGrid = document.getElementById('screenshots-grid');
+        if (!data.screenshots || data.screenshots.length === 0) {
+          scGrid.innerHTML = '<div class="col-span-full p-8 text-center text-slate-400 border border-slate-200 rounded-3xl bg-white font-medium">Aucune capture d\'écran trouvée. Cochez "Capturer les écrans" dans le studio !</div>';
+        } else {
+          scGrid.innerHTML = data.screenshots.map(s => `
+            <a href="${s.url}" target="_blank" class="group relative rounded-2xl overflow-hidden border border-slate-200 bg-white aspect-video block hover:border-[#c1121f] transition-all shadow-sm">
+              <img src="${s.url}" alt="${escapeAttr(s.name)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition p-2.5 flex flex-col justify-end text-[10px] text-white">
+                <span class="truncate font-black">${escapeHtml(s.name)}</span>
+                <span class="text-blue-200 font-mono">${s.size_kb} KB</span>
+              </div>
+            </a>
+          `).join('');
+        }
+
+      } catch (e) {
+        console.error('Error loading media:', e);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // BACKEND SETTINGS MODAL
+    // -------------------------------------------------------------
+    function openBackendModal() {
+      const modal = document.getElementById('backend-modal');
+      const input = document.getElementById('input-backend-url');
+      if (input) input.value = apiBaseUrl;
+      if (modal) modal.showModal();
+    }
+
+    function saveBackendUrl() {
+      const input = document.getElementById('input-backend-url');
+      const val = (input?.value || '').trim();
+      if (val) {
+        localStorage.setItem('acrow_backend_url', val);
+        apiBaseUrl = val;
+        showToast(`Backend configuré : ${val}`, 'success');
+        document.getElementById('cloud-banner')?.classList.add('hidden');
+      } else {
+        localStorage.removeItem('acrow_backend_url');
+        apiBaseUrl = '';
+        showToast('Mode local par défaut rétabli.', 'info');
+      }
+      document.getElementById('backend-modal')?.close();
+      initSSE();
+      checkInitialStatus();
+      refreshDataFiles();
+    }
+
+    function resetBackendUrl() {
+      localStorage.removeItem('acrow_backend_url');
+      apiBaseUrl = '';
+      const input = document.getElementById('input-backend-url');
+      if (input) input.value = '';
+      showToast('Backend réinitialisé vers local.', 'info');
+      document.getElementById('backend-modal')?.close();
+      initSSE();
+      checkInitialStatus();
+      refreshDataFiles();
+    }
+                <span class="text-blue-200 font-mono">${s.size_kb} KB</span>
+              </div>
+            </a>
+          `).join('');
+        }
+
+      } catch (e) {
+        console.error('Error loading media:', e);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // TOAST NOTIFICATIONS & UTILS
+    // -------------------------------------------------------------
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      let alertClass = 'bg-white text-slate-900 border-[#111c38] shadow-card';
+      let icon = '<i class="fa-solid fa-circle-info text-[#111c38] text-base"></i>';
+      if (type === 'success') {
+        alertClass = 'bg-white text-slate-900 border-emerald-500 shadow-card';
+        icon = '<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>';
+      } else if (type === 'error') {
+        alertClass = 'bg-white text-slate-900 border-[#c1121f] shadow-card';
+        icon = '<i class="fa-solid fa-triangle-exclamation text-[#c1121f] text-base"></i>';
+      } else if (type === 'warning') {
+        alertClass = 'bg-white text-slate-900 border-[#c1121f] shadow-card';
+        icon = '<i class="fa-solid fa-triangle-exclamation text-[#c1121f] text-base"></i>';
+      }
+
+      toast.className = `alert ${alertClass} shadow-xl border text-xs sm:text-sm py-3 px-4 rounded-2xl flex items-center gap-3 transform transition-all duration-300 translate-y-3 opacity-0 font-bold`;
+      toast.innerHTML = `${icon} <span>${escapeHtml(message)}</span>`;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.remove('translate-y-3', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-3');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function toggleQuickDocs() {
+      alert(
+        "ACROW DZ — Procurement Scraper (by Aymen) :\n\n" +
+        "1. Lancer rapide : Appuyez sur Ctrl + Entrée dans le champ de recherche.\n" +
+        "2. Bouton Lancer (Bleu ACROW) : Démarre le sourcing de vos fournisseurs sur Google Maps.\n" +
+        "3. Bouton Arrêter (Rouge ACROW) : Arrête immédiatement Playwright et Chrome.\n" +
+        "4. Barre de progression : Progression en temps réel Bleu & Rouge.\n" +
+        "5. Bouton Copier Téléphones : Copie tous les numéros des fournisseurs en 1 clic pour vos devis / WhatsApp !"
+      );
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeAttr(str) {
+      if (!str) return '';
+      return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Configuration de Déploiement Netlify
+# ACROW DZ — Procurement Scraper (by Aymen)
+
+[build]
+  publish = "public"
+  command = "python3 build_static.py || python build_static.py"
+
+[build.environment]
+  PYTHON_VERSION = "3.10"
+
+# Redirection SPA & API
+# NOTE : Netlify héberge l'interface statique (HTML/CSS/JS).
+# Le scraping Playwright/Chrome requiert un backend persistant (Render / Railway / VPS).
+# Pour connecter l'interface Netlify à votre backend hébergé :
+# Décommentez et remplacez par votre URL de backend (ex: https://acrow-scraper.onrender.com) :
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://VOTRE-BACKEND.onrender.com/api/:splat"
+#   status = 200
+#   force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+result.csv
+output.csv
+playwright/.cache/
+.netlify/
+*.log
+.DS_Store

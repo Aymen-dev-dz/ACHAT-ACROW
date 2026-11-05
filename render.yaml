@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: acrow-procurement-scraper
+    env: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
