@@ -673,11 +673,12 @@ def serve_media(category: str, filename: str):
     abort(404)
 
 
-def find_available_port(preferred_ports=(5050, 8080, 8000, 5500, 7860)) -> int:
+def find_available_port(preferred_ports=(5050, 7860, 8000, 5500, 8080)) -> int:
     import socket
     for p in preferred_ports:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind(("127.0.0.1", p))
                 return p
             except OSError:
@@ -685,6 +686,7 @@ def find_available_port(preferred_ports=(5050, 8080, 8000, 5500, 7860)) -> int:
     for p in range(5051, 5100):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind(("127.0.0.1", p))
                 return p
             except OSError:

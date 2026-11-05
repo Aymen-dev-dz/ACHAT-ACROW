@@ -370,41 +370,43 @@ def scrape_places(
 
         page = context.new_page()
 
-        # Crucial RAM optimization: abort heavy resource types (image, media, font)
-        def _route_filter(route):
-            try:
-                req = route.request
-                if req.resource_type in ["image", "media", "font"]:
-                    route.abort()
-                    return
-                u = req.url
-                if "google-analytics" in u or "/log?" in u or "stats.g." in u or "play.google.com/log" in u:
-                    route.abort()
-                    return
-                route.continue_()
-            except Exception:
+        # Crucial RAM optimization: abort heavy resource types only in headless/cloud mode
+        if headless or platform.system() != "Windows":
+            def _route_filter(route):
                 try:
-                    route.abort()
+                    req = route.request
+                    if req.resource_type in ["image", "media", "font"]:
+                        route.abort()
+                        return
+                    u = req.url
+                    if "google-analytics" in u or "/log?" in u or "stats.g." in u or "play.google.com/log" in u:
+                        route.abort()
+                        return
+                    route.continue_()
                 except Exception:
-                    pass
+                    try:
+                        route.abort()
+                    except Exception:
+                        pass
 
-        try:
-            page.route("**/*", _route_filter)
-        except Exception:
-            pass
+            try:
+                page.route("**/*", _route_filter)
+            except Exception:
+                pass
 
         try:
             page.goto("https://www.google.com/maps?hl=fr", timeout=30000, wait_until="domcontentloaded")
             page.wait_for_timeout(1000)
 
-            # Accept cookies dialog if present (fallback)
+            # Accept cookies dialog if present (fallback for FR, EN, IT, AR)
             cookie_selectors = [
-                '//button[contains(., "Tout accepter") or contains(., "Accept all") or contains(., "I agree") or contains(., "Accetta tutto")]',
-                '//button[contains(@aria-label, "Tout accepter") or contains(@aria-label, "Accept all")]',
+                '//button[contains(., "Tout accepter") or contains(., "Accept all") or contains(., "I agree") or contains(., "Accetta tutto") or contains(., "قبول الكل") or contains(., "موافق")]',
+                '//button[contains(@aria-label, "Tout accepter") or contains(@aria-label, "Accept all") or contains(@aria-label, "قبول")]',
                 'form[action*="consent"] button',
                 'button:has-text("Tout accepter")',
                 'button:has-text("Accept all")',
                 'button:has-text("I agree")',
+                'button:has-text("قبول الكل")',
             ]
             for sel in cookie_selectors:
                 try:
@@ -423,6 +425,12 @@ def scrape_places(
                 pass
             search_input.fill(search_for)
             page.keyboard.press("Enter")
+            try:
+                search_btn = page.locator("#searchbox-searchbutton, button[id*='searchbox-searchbutton'], button[aria-label='Rechercher'], button[aria-label='Search']").first
+                if search_btn.is_visible(timeout=1000):
+                    search_btn.click()
+            except Exception:
+                pass
 
             # Check if direct place page loaded
             time.sleep(3)
@@ -436,7 +444,7 @@ def scrape_places(
                     return places
 
             try:
-                page.wait_for_selector('//a[contains(@href, "https://www.google.com/maps/place")]', timeout=25000)
+                page.wait_for_selector('//a[contains(@href, "/maps/place")]', timeout=25000)
             except Exception as e:
                 logging.warning(f"Attente de résultats terminée ou aucun résultat direct: {e}")
 
@@ -444,7 +452,7 @@ def scrape_places(
                 os.makedirs("screenshots", exist_ok=True)
                 page.screenshot(path="screenshots/1_search_results.png")
 
-            listings_locator = page.locator('//a[contains(@href, "https://www.google.com/maps/place")]')
+            listings_locator = page.locator('//a[contains(@href, "/maps/place")]')
             previously_counted = 0
             same_count_retries = 0
             while True:
@@ -469,7 +477,7 @@ def scrape_places(
                     same_count_retries = 0
                 previously_counted = found
 
-            raw_listings = page.locator('//a[contains(@href, "https://www.google.com/maps/place")]').all()[:total]
+            raw_listings = page.locator('//a[contains(@href, "/maps/place")]').all()[:total]
             logging.info(f"Total Found: {len(raw_listings)}")
             for idx, listing in enumerate(raw_listings):
                 try:

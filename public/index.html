@@ -1056,8 +1056,12 @@
     let sortAsc = true;
     let eventSource = null;
 
-    // Backend URL handling (automatically connects Netlify frontend to Render backend)
-    let apiBaseUrl = localStorage.getItem('acrow_backend_url') || (window.location.hostname.includes('netlify.app') ? 'https://achat-acrow.onrender.com' : '');
+    // Backend URL handling: Localhost MUST ALWAYS use local backend directly!
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocalhost) {
+      try { localStorage.removeItem('acrow_backend_url'); } catch(e){}
+    }
+    let apiBaseUrl = isLocalhost ? '' : (localStorage.getItem('acrow_backend_url') || (window.location.hostname.includes('netlify.app') ? 'https://achat-acrow.onrender.com' : ''));
 
     function apiUrl(path) {
       if (!apiBaseUrl) return path;
@@ -1320,13 +1324,15 @@
         return;
       }
 
-      const total = parseInt(document.getElementById('input-total').value, 10);
-      const isHeadless = document.querySelector('input[name="browser-mode"]:checked').value === 'headless';
-      const slowMo = parseInt(document.getElementById('range-slowmo').value, 10);
-      const outputFile = document.getElementById('input-output-file').value.trim() || 'result.csv';
-      const append = document.getElementById('check-append').checked;
-      const screenshots = document.getElementById('check-screenshots').checked;
-      const recordVideo = document.getElementById('check-video').checked;
+      const total = parseInt(document.getElementById('input-total')?.value || '10', 10);
+      const checkedRadio = document.querySelector('input[name="browser-mode"]:checked');
+      const isHeadless = checkedRadio ? (checkedRadio.value === 'headless') : true;
+      const slowMoEl = document.getElementById('range-slowmo');
+      const slowMo = slowMoEl ? parseInt(slowMoEl.value, 10) : 0;
+      const outputFile = (document.getElementById('input-output-file')?.value || '').trim() || 'result.csv';
+      const append = document.getElementById('check-append')?.checked || false;
+      const screenshots = document.getElementById('check-screenshots')?.checked || false;
+      const recordVideo = document.getElementById('check-video')?.checked || false;
 
       currentOutputFile = outputFile;
 
