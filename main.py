@@ -146,13 +146,17 @@ def attach_to_default_desktop():
 
 def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: int = 0, record_video_dir: Optional[str] = None, save_screenshots: bool = False, output_path: Optional[str] = None, append: bool = False) -> List[Place]:
     setup_logging()
+    if platform.system() != "Windows" and not os.environ.get("DISPLAY"):
+        logging.info("Environnement cloud sans écran détecté (Docker/Linux) : forçage du mode Headless.")
+        headless = True
+
     if not headless:
         attach_to_default_desktop()
     places: List[Place] = []
     with sync_playwright() as p:
         launch_args = ["--start-maximized"] if not headless else []
         if platform.system() != "Windows":
-            launch_args.extend(["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
+            launch_args.extend(["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-software-rasterizer"])
         if platform.system() == "Windows":
             chrome_candidates = [
                 r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -181,18 +185,31 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
             page.goto("https://www.google.com/maps/@32.9817464,70.1930781,3.67z?", timeout=60000)
             page.wait_for_timeout(1000)
 
-            # Accept cookies dialog if present
-            try:
-                consent = page.locator('//button[contains(., "Tout accepter") or contains(., "Accept all") or contains(@aria-label, "Tout accepter") or contains(@aria-label, "Accept all")]').first
-                if consent.is_visible(timeout=2000):
-                    consent.click()
-                    page.wait_for_timeout(1000)
-            except Exception:
-                pass
+            # Accept cookies dialog if present (Crucial for European cloud servers like Render Frankfurt)
+            cookie_selectors = [
+                '//button[contains(., "Tout accepter") or contains(., "Accept all") or contains(., "I agree") or contains(., "Accetta tutto")]',
+                '//button[contains(@aria-label, "Tout accepter") or contains(@aria-label, "Accept all")]',
+                'form[action*="consent"] button',
+                'button:has-text("Tout accepter")',
+                'button:has-text("Accept all")',
+            ]
+            for sel in cookie_selectors:
+                try:
+                    c_btn = page.locator(sel).first
+                    if c_btn.is_visible(timeout=1500):
+                        c_btn.click()
+                        page.wait_for_timeout(1000)
+                        break
+                except Exception:
+                    pass
 
-            page.locator("//form[contains(@jsaction,'searchboxFormSubmit')]//input[@name='q']").fill(search_for)
+            search_input = page.locator("#searchboxinput, input[name='q'], //input[@id='searchboxinput']").first
+            search_input.fill(search_for)
             page.keyboard.press("Enter")
-            page.wait_for_selector('//a[contains(@href, "https://www.google.com/maps/place")]')
+            try:
+                page.wait_for_selector('//a[contains(@href, "https://www.google.com/maps/place")]', timeout=25000)
+            except Exception as e:
+                logging.warning(f"Attente de résultats terminée ou aucun résultat direct: {e}")
 
             if save_screenshots:
                 os.makedirs("screenshots", exist_ok=True)

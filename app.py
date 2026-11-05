@@ -205,7 +205,7 @@ class ScraperManager:
             "-o", self.output_file,
             "--slow-mo", str(slow_mo),
         ]
-        if headless:
+        if headless or (sys.platform != "win32" and not os.environ.get("DISPLAY")):
             cmd.append("--headless")
         if append:
             cmd.append("--append")

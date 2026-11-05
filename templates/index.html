@@ -338,32 +338,32 @@
               <label class="text-xs font-black text-[#111c38] uppercase tracking-wider">Mode de visualisation</label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- Visual Option Card (Navy) -->
-                <div id="mode-card-visual" onclick="selectMode('visual')" class="cursor-pointer border-2 border-[#111c38] bg-blue-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm">
+                <!-- Headless Option Card (Default) -->
+                <div id="mode-card-headless" onclick="selectMode('headless')" class="cursor-pointer border-2 border-[#111c38] bg-blue-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm">
                   <div class="mt-0.5">
-                    <input type="radio" name="browser-mode" value="visual" checked class="radio radio-sm accent-[#111c38]">
+                    <input type="radio" name="browser-mode" value="headless" checked class="radio radio-sm accent-[#111c38]">
                   </div>
                   <div class="space-y-1">
                     <div class="font-black text-sm text-[#111c38] flex items-center gap-2">
-                      <i class="fa-solid fa-eye text-[#111c38]"></i> Mode Visuel
+                      <i class="fa-solid fa-bolt text-[#111c38]"></i> Mode Arrière-plan (Recommandé)
                     </div>
                     <p class="text-xs text-slate-600 leading-relaxed font-medium">
-                      La fenêtre Chrome s'ouvre à l'écran pour observer le défilement et la collecte.
+                      Silencieux, optimisé pour le Cloud et rapide pour les séries de fiches.
                     </p>
                   </div>
                 </div>
 
-                <!-- Headless Option Card (Red) -->
-                <div id="mode-card-headless" onclick="selectMode('headless')" class="cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#c1121f]/50">
+                <!-- Visual Option Card -->
+                <div id="mode-card-visual" onclick="selectMode('visual')" class="cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#c1121f]/50">
                   <div class="mt-0.5">
-                    <input type="radio" name="browser-mode" value="headless" class="radio radio-sm accent-[#c1121f]">
+                    <input type="radio" name="browser-mode" value="visual" class="radio radio-sm accent-[#c1121f]">
                   </div>
                   <div class="space-y-1">
                     <div class="font-black text-sm text-[#111c38] flex items-center gap-2">
-                      <i class="fa-solid fa-ghost text-[#c1121f]"></i> Mode Arrière-plan
+                      <i class="fa-solid fa-eye text-[#c1121f]"></i> Mode Fenêtre Visuelle
                     </div>
                     <p class="text-xs text-slate-500 leading-relaxed">
-                      Silencieux et sans fenêtre visible, parfait pour les grandes séries.
+                      Ouvre la fenêtre Chrome sur votre écran (PC local uniquement).
                     </p>
                   </div>
                 </div>
@@ -1150,16 +1150,16 @@
     }
 
     function selectMode(mode) {
-      const isVisual = (mode === 'visual');
+      const isHeadless = (mode === 'headless');
       document.querySelector(`input[name="browser-mode"][value="${mode}"]`).checked = true;
-      const visualCard = document.getElementById('mode-card-visual');
       const headlessCard = document.getElementById('mode-card-headless');
-      if (isVisual) {
-        visualCard.className = 'cursor-pointer border-2 border-[#111c38] bg-blue-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm';
-        headlessCard.className = 'cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#c1121f]/50';
+      const visualCard = document.getElementById('mode-card-visual');
+      if (isHeadless) {
+        headlessCard.className = 'cursor-pointer border-2 border-[#111c38] bg-blue-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm';
+        visualCard.className = 'cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#c1121f]/50';
       } else {
-        headlessCard.className = 'cursor-pointer border-2 border-[#c1121f] bg-red-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm';
-        visualCard.className = 'cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#111c38]/50';
+        visualCard.className = 'cursor-pointer border-2 border-[#c1121f] bg-red-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm';
+        headlessCard.className = 'cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#111c38]/50';
       }
     }
 
