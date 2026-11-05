@@ -704,8 +704,20 @@ def find_available_port(preferred_ports=(5050, 7860, 8000, 5500, 8080)) -> int:
 
 
 def open_browser_delayed(url: str):
-    import webbrowser
     time.sleep(1.2)
+    chrome_candidates = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+    ]
+    for cp in chrome_candidates:
+        if os.path.isfile(cp):
+            try:
+                subprocess.Popen([cp, url])
+                return
+            except Exception:
+                pass
+    import webbrowser
     try:
         webbrowser.open(url)
     except Exception:

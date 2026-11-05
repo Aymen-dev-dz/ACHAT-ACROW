@@ -338,7 +338,11 @@ def scrape_places(
             ]
             browser_path = next((path for path in chrome_candidates if os.path.isfile(path)), None)
             if browser_path:
-                browser = p.chromium.launch(executable_path=browser_path, headless=headless, slow_mo=slow_mo, args=launch_args)
+                try:
+                    browser = p.chromium.launch(executable_path=browser_path, headless=headless, slow_mo=slow_mo, args=launch_args)
+                except Exception as e:
+                    logging.warning(f"Could not launch installed Chrome ({e}), falling back to bundled Chromium.")
+                    browser = p.chromium.launch(headless=headless, slow_mo=slow_mo, args=launch_args)
             else:
                 browser = p.chromium.launch(headless=headless, slow_mo=slow_mo, args=launch_args)
         else:

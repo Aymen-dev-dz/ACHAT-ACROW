@@ -1095,6 +1095,11 @@
         document.getElementById('cloud-banner')?.classList.remove('hidden');
       }
 
+      // On PC local, default to visual window mode so Chrome opens on screen
+      if (isLocalhost) {
+        selectMode('visual');
+      }
+
       initSSE();
       refreshDataFiles();
       loadMediaGallery();
