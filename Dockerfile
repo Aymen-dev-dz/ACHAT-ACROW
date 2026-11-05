@@ -24,5 +24,5 @@ COPY . .
 # Port d'écoute standard pour Render / Railway / Cloud Run
 EXPOSE 8080
 
-# Démarrage avec Gunicorn (1 worker, 4 threads légers pour économiser la RAM sur Render 512MB)
-CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 1 --threads 4 --timeout 300"]
+# Démarrage avec Gunicorn (1 worker, 8 threads gthread asynchrones pour gérer SSE + API en continu)
+CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 1 -k gthread --threads 8 --timeout 300"]

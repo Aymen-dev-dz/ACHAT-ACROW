@@ -382,7 +382,7 @@ def scrape_places(
                         listing.click()
 
                     try:
-                        page.wait_for_selector('h1.DUwDvf, //h1[contains(@class, "DUwDvf")]', timeout=8000)
+                        page.wait_for_selector('h1.DUwDvf, h1[class*="DUwDvf"], div.TIHn2 h1', timeout=8000)
                     except Exception:
                         time.sleep(1.5)
 
