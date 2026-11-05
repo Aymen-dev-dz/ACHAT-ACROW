@@ -40,12 +40,99 @@ def setup_logging():
         format='%(asctime)s - %(levelname)s - %(message)s',
     )
 
+def clean_str(s: str) -> str:
+    if not s:
+        return ""
+    # Strip Google Material icon codes (\ue000-\uf8ff)
+    s = re.sub(r'[\ue000-\uf8ff]', '', s)
+    # Normalize multiple whitespace
+    s = re.sub(r'\s+', ' ', s)
+    return s.strip()
+
+def parse_sidebar_card(link_element) -> Place:
+    place = Place()
+    # Name from aria-label
+    aria = link_element.get_attribute("aria-label") or ""
+    place.name = clean_str(aria)
+
+    parent = link_element.locator("xpath=..")
+    raw_text = parent.inner_text()
+    raw_lines = [clean_str(l) for l in raw_text.split("\n")]
+    lines = [l for l in raw_lines if l and l != "Sponsorisé" and l != place.name]
+
+    # Direct website link in the card if available
+    try:
+        web_links = parent.locator('a[href^="http"]:not([href*="google.com/maps"])').all()
+        for wl in web_links:
+            href = wl.get_attribute("href")
+            if href and "google.com" not in href:
+                place.website = href
+                break
+    except Exception:
+        pass
+
+    full_str = " · ".join(lines)
+
+    # 1. Phone number (Algerian/International formats)
+    phone_match = re.search(r'(?:\+?\d{1,4}[-.\s]?)?(?:\(?0\d{1,3}\)?[-.\s]?)?\d{2}[-.\s]?\d{2}[-.\s]?\d{2}[-.\s]?\d{2}', full_str)
+    if phone_match:
+        cand = phone_match.group(0).strip()
+        digits = re.sub(r'\D', '', cand)
+        if 8 <= len(digits) <= 14:
+            place.phone_number = cand
+
+    # 2. Rating & Reviews count (e.g. "4,8 (12)", "5,0 (1)", "4.3")
+    rating_match = re.search(r'(\d+[.,]\d+)\s*(?:\((\d+[\s\d]*)\))?', full_str)
+    if rating_match:
+        try:
+            place.reviews_average = float(rating_match.group(1).replace(',', '.'))
+            if rating_match.group(2):
+                place.reviews_count = int(re.sub(r'\s', '', rating_match.group(2)))
+        except Exception:
+            pass
+
+    # 3. Categorize lines (type, address, hours)
+    for line in lines:
+        l_low = line.lower()
+        if 'achat en magasin' in l_low or 'in-store shopping' in l_low:
+            place.store_shopping = "Yes"
+        if 'retrait en magasin' in l_low or 'in-store pickup' in l_low:
+            place.in_store_pickup = "Yes"
+        if 'livraison' in l_low or 'delivery' in l_low:
+            place.store_delivery = "Yes"
+
+        if any(h in l_low for h in ['ferme', 'ouvert', 'ouvre', 'open', 'closed']):
+            clean_hours = line
+            if place.phone_number and place.phone_number in clean_hours:
+                clean_hours = clean_hours.replace(place.phone_number, "").strip(" ·")
+            place.opens_at = clean_hours
+
+        # Splitting by bullet
+        parts = [p.strip() for p in line.split('·')]
+        if len(parts) >= 2:
+            cand_type = clean_str(parts[0])
+            if not place.place_type and cand_type and not any(char.isdigit() for char in cand_type):
+                place.place_type = cand_type
+            if len(parts) > 1:
+                for cand_addr in parts[1:]:
+                    cand_addr = clean_str(cand_addr)
+                    if cand_addr and not any(w in cand_addr.lower() for w in ['ferme', 'ouvert', 'ouvre', 'km', 'avis']) and cand_addr != place.phone_number:
+                        if not place.address:
+                            place.address = cand_addr
+        elif len(parts) == 1:
+            val = clean_str(parts[0])
+            if val and not place.place_type and not any(char.isdigit() for char in val) and len(val) < 40:
+                if not any(w in val.lower() for w in ['ferme', 'ouvert', 'ouvre', 'avis']):
+                    place.place_type = val
+
+    return place
+
 def extract_text(page: Page, xpath: str) -> str:
     try:
         loc = page.locator(xpath)
         if loc.count() > 0:
             return loc.first.inner_text().strip()
-    except Exception as e:
+    except Exception:
         pass
     return ""
 
@@ -54,11 +141,9 @@ def extract_place(page: Page, fallback_name: str = "") -> Place:
 
     # Name extraction with multiple fallbacks
     name_selectors = [
-        '//div[@class="TIHn2 "]//h1[@class="DUwDvf lfPIob"]',
-        '//h1[contains(@class, "DUwDvf")]',
         'h1.DUwDvf',
         'div.TIHn2 h1',
-        '//div[contains(@class, "TIHn2")]//h1',
+        'h1[class*="DUwDvf"]',
         'h1',
     ]
     name = ""
@@ -66,7 +151,7 @@ def extract_place(page: Page, fallback_name: str = "") -> Place:
         try:
             loc = page.locator(sel)
             if loc.count() > 0:
-                txt = loc.first.inner_text().strip()
+                txt = clean_str(loc.first.inner_text())
                 if txt and txt != "Résultats" and not txt.startswith("Sponsoris"):
                     name = txt
                     break
@@ -76,12 +161,12 @@ def extract_place(page: Page, fallback_name: str = "") -> Place:
 
     # Address
     address_xpath = '//button[@data-item-id="address"]//div[contains(@class, "fontBodyMedium")]'
-    place.address = extract_text(page, address_xpath)
+    place.address = clean_str(extract_text(page, address_xpath))
     if not place.address:
         try:
             addr_loc = page.locator('button[data-item-id="address"]')
             if addr_loc.count() > 0:
-                place.address = addr_loc.first.inner_text().strip()
+                place.address = clean_str(addr_loc.first.inner_text())
         except Exception:
             pass
 
@@ -113,9 +198,9 @@ def extract_place(page: Page, fallback_name: str = "") -> Place:
 
     # Place Type
     place_type_xpath = '//div[@class="LBgpqf"]//button[@class="DkEaL "]'
-    place.place_type = extract_text(page, place_type_xpath)
+    place.place_type = clean_str(extract_text(page, place_type_xpath))
     if not place.place_type:
-        place.place_type = extract_text(page, '//button[contains(@class, "DkEaL")]')
+        place.place_type = clean_str(extract_text(page, '//button[contains(@class, "DkEaL")]'))
 
     # Introduction
     intro_xpath = '//div[@class="WeS02d fontBodyMedium"]//div[@class="PYvSYb "]'
@@ -179,17 +264,17 @@ def extract_place(page: Page, fallback_name: str = "") -> Place:
     if opens_at_raw:
         opens = opens_at_raw.split('⋅')
         if len(opens) > 1:
-            place.opens_at = opens[1].replace("\u202f","")
+            place.opens_at = opens[1].replace("\u202f","").strip()
         else:
-            place.opens_at = opens_at_raw.replace("\u202f","")
+            place.opens_at = opens_at_raw.replace("\u202f","").strip()
     else:
         opens_at2_raw = extract_text(page, opens_at_xpath2)
         if opens_at2_raw:
             opens = opens_at2_raw.split('⋅')
             if len(opens) > 1:
-                place.opens_at = opens[1].replace("\u202f","")
+                place.opens_at = opens[1].replace("\u202f","").strip()
             else:
-                place.opens_at = opens_at2_raw.replace("\u202f","")
+                place.opens_at = opens_at2_raw.replace("\u202f","").strip()
     return place
 
 def attach_to_default_desktop():
@@ -286,8 +371,6 @@ def scrape_places(
         page = context.new_page()
 
         # Crucial RAM optimization: abort heavy resource types (image, media, font)
-        # Google Maps HTML DOM contains all text, addresses, phones, links, and ratings.
-        # Blocking images reduces Chromium memory footprint from ~450MB to <90MB.
         def _route_filter(route):
             try:
                 req = route.request
@@ -390,23 +473,21 @@ def scrape_places(
             logging.info(f"Total Found: {len(raw_listings)}")
             for idx, listing in enumerate(raw_listings):
                 try:
-                    fallback_name = listing.get_attribute("aria-label") or ""
-                    parent = listing.locator("xpath=..")
-                    try:
-                        parent.scroll_into_view_if_needed()
-                        parent.click()
-                    except Exception:
-                        listing.click()
+                    # High-speed, memory-safe card extraction (0% OOM risk)
+                    place = parse_sidebar_card(listing)
 
-                    try:
-                        page.wait_for_selector('h1.DUwDvf, h1[class*="DUwDvf"], div.TIHn2 h1', timeout=8000)
-                    except Exception:
-                        time.sleep(1.5)
+                    # In non-headless desktop visual mode, optionally click for inspection
+                    if not headless and (not place.phone_number or not place.address):
+                        try:
+                            parent = listing.locator("xpath=..")
+                            parent.click()
+                            time.sleep(1)
+                            full_place = extract_place(page, fallback_name=place.name)
+                            if full_place.name:
+                                place = full_place
+                        except Exception:
+                            pass
 
-                    if save_screenshots and idx < 3:
-                        page.screenshot(path=f"screenshots/place_{idx+1}.png")
-
-                    place = extract_place(page, fallback_name=fallback_name)
                     if place.name:
                         places.append(place)
                         target_total = min(total, len(raw_listings))
