@@ -428,6 +428,15 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/health")
+def api_health():
+    return jsonify({
+        "status": "ok",
+        "app": "ACROW DZ Procurement Scraper",
+        "timestamp": datetime.now().isoformat()
+    })
+
+
 @app.route("/api/version")
 def api_version():
     return jsonify({
@@ -715,4 +724,4 @@ if __name__ == "__main__":
     # Automatically open default browser once started
     threading.Thread(target=open_browser_delayed, args=(url,), daemon=True).start()
 
-    app.run(host="127.0.0.1", port=port, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

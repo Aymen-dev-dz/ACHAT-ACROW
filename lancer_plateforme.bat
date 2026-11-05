@@ -8,12 +8,14 @@ echo ======================================================================
 echo   ACROW DZ - PROCUREMENT SCRAPER (BY AYMEN) - SOURCING ACHATS
 echo ======================================================================
 echo.
-echo   Demarrage du serveur sur http://127.0.0.1:5050 ...
-echo   Votre navigateur par defaut va s'ouvrir automatiquement.
+echo   Demarrage de la plateforme sur http://127.0.0.1:5050 ...
+echo   Ouverture automatique de votre navigateur dans 2 secondes...
 echo.
 echo   Pour arreter le serveur : fermez cette fenetre ou appuyez sur Ctrl+C
 echo ======================================================================
 echo.
+
+start "" "http://127.0.0.1:5050"
 
 python app.py
 
