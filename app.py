@@ -428,6 +428,16 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/version")
+def api_version():
+    return jsonify({
+        "status": "online",
+        "app": "ACROW DZ Procurement Scraper",
+        "version": "1.2.0-render-optimized",
+        "build_date": "2026-11-05"
+    })
+
+
 @app.route("/api/scrape/start", methods=["POST"])
 def api_start_scrape():
     data = request.get_json() or {}

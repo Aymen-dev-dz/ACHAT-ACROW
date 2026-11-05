@@ -288,8 +288,25 @@ def scrape_places(
         # Crucial RAM optimization: abort heavy resource types (image, media, font)
         # Google Maps HTML DOM contains all text, addresses, phones, links, and ratings.
         # Blocking images reduces Chromium memory footprint from ~450MB to <90MB.
+        def _route_filter(route):
+            try:
+                req = route.request
+                if req.resource_type in ["image", "media", "font"]:
+                    route.abort()
+                    return
+                u = req.url
+                if "google-analytics" in u or "/log?" in u or "stats.g." in u or "play.google.com/log" in u:
+                    route.abort()
+                    return
+                route.continue_()
+            except Exception:
+                try:
+                    route.abort()
+                except Exception:
+                    pass
+
         try:
-            page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "font"] else route.continue_())
+            page.route("**/*", _route_filter)
         except Exception:
             pass
 
