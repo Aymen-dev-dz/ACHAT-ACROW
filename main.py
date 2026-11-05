@@ -171,7 +171,10 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
         else:
             browser = p.chromium.launch(headless=headless, slow_mo=slow_mo, args=launch_args)
 
-        context_kwargs = {}
+        context_kwargs = {
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "locale": "fr-FR",
+        }
         if record_video_dir:
             os.makedirs(record_video_dir, exist_ok=True)
             context_kwargs["record_video_dir"] = record_video_dir
@@ -182,7 +185,7 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
         context = browser.new_context(**context_kwargs)
         page = context.new_page()
         try:
-            page.goto("https://www.google.com/maps/@32.9817464,70.1930781,3.67z?", timeout=60000)
+            page.goto("https://www.google.com/maps?hl=fr", timeout=60000)
             page.wait_for_timeout(1000)
 
             # Accept cookies dialog if present (Crucial for European cloud servers like Render Frankfurt)
@@ -192,6 +195,7 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
                 'form[action*="consent"] button',
                 'button:has-text("Tout accepter")',
                 'button:has-text("Accept all")',
+                'button:has-text("I agree")',
             ]
             for sel in cookie_selectors:
                 try:
@@ -203,7 +207,7 @@ def scrape_places(search_for: str, total: int, headless: bool = False, slow_mo: 
                 except Exception:
                     pass
 
-            search_input = page.locator("#searchboxinput, input[name='q'], //input[@id='searchboxinput']").first
+            search_input = page.locator("#searchboxinput, input[name='q']").first
             search_input.fill(search_for)
             page.keyboard.press("Enter")
             try:
