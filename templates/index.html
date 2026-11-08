@@ -333,6 +333,34 @@
               </div>
             </div>
 
+            <!-- Quality & Rating Filter (5 Stars Priority) -->
+            <div class="space-y-2 bg-gradient-to-r from-amber-50 to-orange-50/50 p-4 rounded-2xl border border-amber-200 shadow-sm">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-black text-[#111c38] flex items-center gap-1.5 uppercase tracking-wider">
+                  <i class="fa-solid fa-star text-amber-500"></i>
+                  Filtre de Qualité : Note minimale
+                </label>
+                <span id="label-rating-status" class="text-xs font-black text-amber-900 bg-amber-200/80 px-2.5 py-0.5 rounded-full">
+                  ⭐ 5.0 étoiles uniquement (Top Qualité)
+                </span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                <button type="button" id="btn-rating-5" onclick="setMinRating(5.0)" class="rating-filter-btn py-2.5 px-3 rounded-xl text-xs font-black bg-[#111c38] text-white shadow-sm flex items-center justify-center gap-1.5 transition active:scale-95">
+                  <i class="fa-solid fa-star text-amber-400"></i> 5.0 Étoiles
+                </button>
+                <button type="button" id="btn-rating-4.5" onclick="setMinRating(4.5)" class="rating-filter-btn py-2.5 px-3 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 flex items-center justify-center gap-1 transition active:scale-95">
+                  <i class="fa-solid fa-star text-amber-400"></i> 4.5+ Étoiles
+                </button>
+                <button type="button" id="btn-rating-4" onclick="setMinRating(4.0)" class="rating-filter-btn py-2.5 px-3 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 flex items-center justify-center gap-1 transition active:scale-95">
+                  <i class="fa-solid fa-star text-amber-400"></i> 4.0+ Étoiles
+                </button>
+                <button type="button" id="btn-rating-0" onclick="setMinRating(0.0)" class="rating-filter-btn py-2.5 px-3 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 flex items-center justify-center gap-1 transition active:scale-95">
+                  Toutes notes
+                </button>
+              </div>
+              <input type="hidden" id="input-min-rating" value="5.0">
+            </div>
+
             <!-- Segmented Mode Cards: Visual vs Headless -->
             <div class="space-y-2">
               <label class="text-xs font-black text-[#111c38] uppercase tracking-wider">Mode de visualisation</label>
@@ -706,6 +734,7 @@
             <button onclick="setFilter('all')" id="btn-flt-all" class="filter-chip px-3 py-1.5 rounded-xl text-xs font-black bg-[#111c38] text-white shadow-sm">Tous</button>
             <button onclick="setFilter('phone')" id="btn-flt-phone" class="filter-chip px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#c1121f] hover:bg-red-50 border border-red-200">📞 Avec Tél</button>
             <button onclick="setFilter('web')" id="btn-flt-web" class="filter-chip px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-blue-700 hover:bg-blue-50 border border-blue-200">🌐 Avec Site</button>
+            <button onclick="setFilter('rating5')" id="btn-flt-rating5" class="filter-chip px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-amber-800 hover:bg-amber-50 border border-amber-300">⭐ 5.0 Étoiles</button>
             <button onclick="setFilter('rating4')" id="btn-flt-rating4" class="filter-chip px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-300">⭐ Note ≥ 4.0</button>
           </div>
 
@@ -1173,6 +1202,39 @@
       }
     }
 
+    let selectedMinRating = 5.0;
+
+    function setMinRating(val) {
+      selectedMinRating = parseFloat(val);
+      const input = document.getElementById('input-min-rating');
+      if (input) input.value = selectedMinRating;
+
+      const labelStatus = document.getElementById('label-rating-status');
+      if (labelStatus) {
+        if (selectedMinRating >= 5.0) labelStatus.innerText = '⭐ 5.0 étoiles uniquement (Top Qualité)';
+        else if (selectedMinRating >= 4.5) labelStatus.innerText = '⭐ 4.5 étoiles et plus (Recommandé)';
+        else if (selectedMinRating >= 4.0) labelStatus.innerText = '⭐ 4.0 étoiles et plus (Standard)';
+        else labelStatus.innerText = 'Toutes les notes (aucun filtre)';
+      }
+
+      const map = {
+        '5': 'btn-rating-5',
+        '4.5': 'btn-rating-4.5',
+        '4': 'btn-rating-4',
+        '0': 'btn-rating-0'
+      };
+      const key = (selectedMinRating === 5.0) ? '5' : (selectedMinRating === 4.5 ? '4.5' : (selectedMinRating === 4.0 ? '4' : '0'));
+      Object.keys(map).forEach(k => {
+        const btn = document.getElementById(map[k]);
+        if (!btn) return;
+        if (k === key) {
+          btn.className = 'rating-filter-btn py-2.5 px-3 rounded-xl text-xs font-black bg-[#111c38] text-white shadow-sm flex items-center justify-center gap-1.5 transition active:scale-95';
+        } else {
+          btn.className = 'rating-filter-btn py-2.5 px-3 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 flex items-center justify-center gap-1 transition active:scale-95';
+        }
+      });
+    }
+
     function toggleAdvancedOptions() {
       const adv = document.getElementById('advanced-options');
       const arrow = document.getElementById('advanced-arrow');
@@ -1331,6 +1393,7 @@
       }
 
       const total = parseInt(document.getElementById('input-total')?.value || '10', 10);
+      const minRating = parseFloat(document.getElementById('input-min-rating')?.value || '5.0');
       const checkedRadio = document.querySelector('input[name="browser-mode"]:checked');
       const isHeadless = checkedRadio ? (checkedRadio.value === 'headless') : true;
       const slowMoEl = document.getElementById('range-slowmo');
@@ -1367,6 +1430,7 @@
           body: JSON.stringify({
             search: search,
             total: total,
+            min_rating: minRating,
             headless: isHeadless,
             slow_mo: slowMo,
             output_file: outputFile,
@@ -1580,8 +1644,9 @@
 
     function setFilter(type) {
       currentFilterType = type;
-      ['all', 'phone', 'web', 'rating4'].forEach(t => {
+      ['all', 'phone', 'web', 'rating5', 'rating4'].forEach(t => {
         const btn = document.getElementById(`btn-flt-${t}`);
+        if (!btn) return;
         if (t === type) {
           btn.className = 'filter-chip px-3 py-1.5 rounded-xl text-xs font-black bg-[#111c38] text-white shadow-sm';
         } else {
@@ -1606,8 +1671,12 @@
           return row.phone_number && String(row.phone_number).trim() !== '';
         } else if (currentFilterType === 'web') {
           return row.website && String(row.website).trim() !== '';
+        } else if (currentFilterType === 'rating5') {
+          const avg = parseFloat(String(row.reviews_average || '').replace(',', '.'));
+          return !isNaN(avg) && avg >= 4.95;
         } else if (currentFilterType === 'rating4') {
-          return parseFloat(row.reviews_average) >= 4.0;
+          const avg = parseFloat(String(row.reviews_average || '').replace(',', '.'));
+          return !isNaN(avg) && avg >= 4.0;
         }
 
         return true;

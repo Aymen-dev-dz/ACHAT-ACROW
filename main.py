@@ -297,7 +297,8 @@ def scrape_places(
     record_video_dir: Optional[str] = None,
     save_screenshots: bool = False,
     output_path: Optional[str] = None,
-    append: bool = False
+    append: bool = False,
+    min_rating: float = 0.0,
 ) -> List[Place]:
     setup_logging()
 
@@ -438,10 +439,14 @@ def scrape_places(
             if "/maps/place/" in page.url:
                 place = extract_place(page)
                 if place.name:
-                    places.append(place)
-                    logging.info(f"EXTRACTED [1/1]: {place.name}")
-                    if output_path:
-                        save_places_to_csv(places, output_path, append=append)
+                    req_rating = 4.95 if min_rating >= 5.0 else min_rating
+                    if min_rating > 0 and (place.reviews_average is None or place.reviews_average < req_rating):
+                        logging.info(f"FILTERED_OUT: '{place.name}' a une note de {place.reviews_average or 'N/A'}⭐ (inférieure à {min_rating}⭐)")
+                    else:
+                        places.append(place)
+                        logging.info(f"EXTRACTED [1/1]: {place.name} (⭐ {place.reviews_average or 'N/A'})")
+                        if output_path:
+                            save_places_to_csv(places, output_path, append=append)
                     return places
 
             try:
@@ -456,10 +461,11 @@ def scrape_places(
             listings_locator = page.locator('//a[contains(@href, "/maps/place")]')
             previously_counted = 0
             same_count_retries = 0
+            target_scroll_count = total if min_rating <= 0 else max(total * 4, 30)
             while True:
                 found = listings_locator.count()
                 logging.info(f"Currently Found: {found}")
-                if found >= total:
+                if found >= target_scroll_count:
                     break
                 if listings_locator.count() > 0:
                     try:
@@ -478,9 +484,11 @@ def scrape_places(
                     same_count_retries = 0
                 previously_counted = found
 
-            raw_listings = page.locator('//a[contains(@href, "/maps/place")]').all()[:total]
+            raw_listings = page.locator('//a[contains(@href, "/maps/place")]').all()
             logging.info(f"Total Found: {len(raw_listings)}")
             for idx, listing in enumerate(raw_listings):
+                if len(places) >= total:
+                    break
                 try:
                     # In visual mode, visibly scroll and highlight the card
                     if not headless:
@@ -509,17 +517,24 @@ def scrape_places(
                         except Exception:
                             pass
 
-                    if place.name:
-                        places.append(place)
-                        target_total = min(total, len(raw_listings))
-                        logging.info(f"EXTRACTED [{len(places)}/{target_total}]: {place.name}")
-                        if output_path:
-                            if append:
-                                save_places_to_csv([place], output_path, append=True)
-                            else:
-                                save_places_to_csv(places, output_path, append=False)
-                    else:
+                    if not place.name:
                         logging.warning(f"No name found for listing {idx+1}, skipping.")
+                        continue
+
+                    # Filter by minimum rating (e.g. 5.0 stars)
+                    if min_rating > 0:
+                        req_rating = 4.95 if min_rating >= 5.0 else min_rating
+                        if place.reviews_average is None or place.reviews_average < req_rating:
+                            logging.info(f"FILTERED_OUT: '{place.name}' a une note de {place.reviews_average or 'N/A'}⭐ (inférieure à {min_rating}⭐)")
+                            continue
+
+                    places.append(place)
+                    logging.info(f"EXTRACTED [{len(places)}/{total}]: {place.name} (⭐ {place.reviews_average})")
+                    if output_path:
+                        if append:
+                            save_places_to_csv([place], output_path, append=True)
+                        else:
+                            save_places_to_csv(places, output_path, append=False)
                 except Exception as e:
                     logging.warning(f"Failed to extract listing {idx+1}: {e}")
 
@@ -562,6 +577,7 @@ def main():
     parser.add_argument("--slow-mo", type=int, default=0, help="Slow down Playwright actions by N milliseconds (useful for watching)")
     parser.add_argument("--record-video", type=str, default=None, help="Directory to save video recordings")
     parser.add_argument("--screenshots", action="store_true", help="Save step-by-step screenshots to screenshots/")
+    parser.add_argument("--min-rating", type=float, default=0.0, help="Minimum rating (1.0 to 5.0) to filter places")
     args = parser.parse_args()
     search_for = args.search or "turkish stores in toronto Canada"
     total = args.total or 1
@@ -571,6 +587,7 @@ def main():
     slow_mo = args.slow_mo
     record_video = args.record_video
     save_screenshots = args.screenshots
+    min_rating = args.min_rating
     places = scrape_places(
         search_for,
         total,
@@ -579,7 +596,8 @@ def main():
         record_video_dir=record_video,
         save_screenshots=save_screenshots,
         output_path=output_path,
-        append=append
+        append=append,
+        min_rating=min_rating
     )
     if not append:
         save_places_to_csv(places, output_path, append=False)

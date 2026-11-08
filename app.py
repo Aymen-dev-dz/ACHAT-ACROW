@@ -101,6 +101,7 @@ class ScraperManager:
         self.total_target: int = 0
         self.current_count: int = 0
         self.current_name: str = ""
+        self.min_rating: float = 0.0
         self.current_step: str = "En attente d'une mission..."
         self.output_file: str = "result.csv"
         self.started_at: Optional[float] = None
@@ -163,6 +164,7 @@ class ScraperManager:
                 "current_name": self.current_name,
                 "current_step": self.current_step,
                 "output_file": self.output_file,
+                "min_rating": self.min_rating,
                 "percentage": percentage,
                 "elapsed_seconds": elapsed,
                 "is_running": self.status == "running",
@@ -178,6 +180,7 @@ class ScraperManager:
         append: bool,
         screenshots: bool,
         record_video: bool,
+        min_rating: float = 0.0,
     ) -> bool:
         with self.lock:
             if self.status == "running":
@@ -186,6 +189,7 @@ class ScraperManager:
             self.status = "running"
             self.search_query = search_query.strip()
             self.total_target = max(1, int(total))
+            self.min_rating = float(min_rating)
             self.current_count = 0
             self.current_name = ""
             self.current_step = "Initialisation du navigateur..."
@@ -205,6 +209,8 @@ class ScraperManager:
             "-o", self.output_file,
             "--slow-mo", str(slow_mo),
         ]
+        if self.min_rating > 0:
+            cmd.extend(["--min-rating", str(self.min_rating)])
         if headless or (sys.platform != "win32" and not os.environ.get("DISPLAY")):
             cmd.append("--headless")
         if append:
@@ -214,8 +220,9 @@ class ScraperManager:
         if record_video:
             cmd.extend(["--record-video", "videos"])
 
+        rating_str = f", Filtre={self.min_rating}⭐" if self.min_rating > 0 else ""
         self.broadcast("status", self.get_state())
-        self.broadcast("log", {"level": "info", "message": f"🚀 Démarrage du scraping: '{self.search_query}' (Cible: {self.total_target} fiches)"})
+        self.broadcast("log", {"level": "info", "message": f"🚀 Démarrage du scraping: '{self.search_query}' (Cible: {self.total_target} fiches{rating_str})"})
         self.broadcast("log", {"level": "info", "message": f"⚙️ Options: Mode={'Arrière-plan (Headless)' if headless else 'Visuel'}, Ralentissement={slow_mo}ms, Sortie='{self.output_file}'"})
 
         try:
@@ -315,6 +322,14 @@ class ScraperManager:
                 try:
                     total_found = int(line.split("Total Found:")[-1].strip())
                     self.current_step = f"{total_found} résultats sélectionnés, extraction des détails..."
+                    should_broadcast = True
+                except Exception:
+                    pass
+
+            elif "FILTERED_OUT:" in line:
+                try:
+                    detail = line.split("FILTERED_OUT:")[-1].strip()
+                    self.current_step = f"Filtre ⭐ : {detail}"
                     should_broadcast = True
                 except Exception:
                     pass
@@ -452,6 +467,7 @@ def api_start_scrape():
     data = request.get_json() or {}
     search_query = data.get("search", "").strip()
     total = int(data.get("total", 10))
+    min_rating = float(data.get("min_rating", 0.0))
     headless = bool(data.get("headless", False))
     slow_mo = int(data.get("slow_mo", 200))
     output_file = data.get("output_file", "").strip() or "result.csv"
@@ -471,6 +487,7 @@ def api_start_scrape():
         append=append,
         screenshots=screenshots,
         record_video=record_video,
+        min_rating=min_rating,
     )
     if not started:
         return jsonify({"success": False, "error": "Un scraping est déjà en cours d'exécution."}), 409
