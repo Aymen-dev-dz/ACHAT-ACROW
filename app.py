@@ -713,7 +713,7 @@ def open_browser_delayed(url: str):
     for cp in chrome_candidates:
         if os.path.isfile(cp):
             try:
-                subprocess.Popen([cp, url])
+                subprocess.Popen([cp, "--new-window", url])
                 return
             except Exception:
                 pass

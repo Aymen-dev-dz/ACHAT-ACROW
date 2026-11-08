@@ -310,7 +310,7 @@ def scrape_places(
         attach_to_default_desktop()
     places: List[Place] = []
     with sync_playwright() as p:
-        launch_args = ["--start-maximized"] if not headless else []
+        launch_args = ["--start-maximized", "--new-window", "--no-default-browser-check"] if not headless else []
         # Essential low-memory args for cloud containers (Render 512MB RAM cap)
         if headless or platform.system() != "Windows":
             launch_args.extend([
@@ -330,20 +330,12 @@ def scrape_places(
                 "--renderer-process-limit=1",
                 "--js-flags=--max-old-space-size=128",
             ])
-        if platform.system() == "Windows":
-            chrome_candidates = [
-                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-                os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
-            ]
-            browser_path = next((path for path in chrome_candidates if os.path.isfile(path)), None)
-            if browser_path:
-                try:
-                    browser = p.chromium.launch(executable_path=browser_path, headless=headless, slow_mo=slow_mo, args=launch_args)
-                except Exception as e:
-                    logging.warning(f"Could not launch installed Chrome ({e}), falling back to bundled Chromium.")
-                    browser = p.chromium.launch(headless=headless, slow_mo=slow_mo, args=launch_args)
-            else:
+        if platform.system() == "Windows" and not headless:
+            try:
+                # Officially recommended Playwright channel for Google Chrome on desktop
+                browser = p.chromium.launch(channel="chrome", headless=headless, slow_mo=slow_mo, args=launch_args)
+            except Exception as e:
+                logging.warning(f"Could not launch via channel='chrome' ({e}), falling back to bundled Chromium.")
                 browser = p.chromium.launch(headless=headless, slow_mo=slow_mo, args=launch_args)
         else:
             browser = p.chromium.launch(headless=headless, slow_mo=slow_mo, args=launch_args)
@@ -373,6 +365,11 @@ def scrape_places(
             pass
 
         page = context.new_page()
+        if not headless:
+            try:
+                page.bring_to_front()
+            except Exception:
+                pass
 
         # Crucial RAM optimization: abort heavy resource types only in headless/cloud mode
         if headless or platform.system() != "Windows":
