@@ -338,32 +338,32 @@
               <label class="text-xs font-black text-[#111c38] uppercase tracking-wider">Mode de visualisation</label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 
-                <!-- Headless Option Card (Default) -->
-                <div id="mode-card-headless" onclick="selectMode('headless')" class="cursor-pointer border-2 border-[#111c38] bg-blue-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm">
+                <!-- Headless Option Card -->
+                <div id="mode-card-headless" onclick="selectMode('headless')" class="cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#111c38]/50">
                   <div class="mt-0.5">
-                    <input type="radio" name="browser-mode" value="headless" checked class="radio radio-sm accent-[#111c38]">
+                    <input type="radio" name="browser-mode" value="headless" class="radio radio-sm accent-[#111c38]">
                   </div>
                   <div class="space-y-1">
                     <div class="font-black text-sm text-[#111c38] flex items-center gap-2">
-                      <i class="fa-solid fa-bolt text-[#111c38]"></i> Mode Arrière-plan (Recommandé)
+                      <i class="fa-solid fa-bolt text-[#111c38]"></i> Mode Arrière-plan
                     </div>
                     <p class="text-xs text-slate-600 leading-relaxed font-medium">
-                      Silencieux, optimisé pour le Cloud et rapide pour les séries de fiches.
+                      Silencieux et rapide en arrière-plan (sans afficher la fenêtre).
                     </p>
                   </div>
                 </div>
 
-                <!-- Visual Option Card -->
-                <div id="mode-card-visual" onclick="selectMode('visual')" class="cursor-pointer border-2 border-slate-200 bg-white rounded-2xl p-4 flex items-start gap-3.5 transition-all hover:border-[#c1121f]/50">
+                <!-- Visual Option Card (Default on Local Desktop) -->
+                <div id="mode-card-visual" onclick="selectMode('visual')" class="cursor-pointer border-2 border-[#c1121f] bg-red-50/50 rounded-2xl p-4 flex items-start gap-3.5 transition-all shadow-sm">
                   <div class="mt-0.5">
-                    <input type="radio" name="browser-mode" value="visual" class="radio radio-sm accent-[#c1121f]">
+                    <input type="radio" name="browser-mode" value="visual" checked class="radio radio-sm accent-[#c1121f]">
                   </div>
                   <div class="space-y-1">
                     <div class="font-black text-sm text-[#111c38] flex items-center gap-2">
-                      <i class="fa-solid fa-eye text-[#c1121f]"></i> Mode Fenêtre Visuelle
+                      <i class="fa-solid fa-eye text-[#c1121f]"></i> Mode Fenêtre Visuelle (Chrome Visible)
                     </div>
-                    <p class="text-xs text-slate-500 leading-relaxed">
-                      Ouvre la fenêtre Chrome sur votre écran (PC local uniquement).
+                    <p class="text-xs text-slate-700 leading-relaxed font-semibold">
+                      Ouvre la fenêtre Google Chrome sur votre écran pour suivre la recherche en direct !
                     </p>
                   </div>
                 </div>

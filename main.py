@@ -485,18 +485,30 @@ def scrape_places(
             logging.info(f"Total Found: {len(raw_listings)}")
             for idx, listing in enumerate(raw_listings):
                 try:
-                    # High-speed, memory-safe card extraction (0% OOM risk)
+                    # In visual mode, visibly scroll and highlight the card
+                    if not headless:
+                        try:
+                            listing.scroll_into_view_if_needed(timeout=2000)
+                            listing.hover(timeout=1500)
+                        except Exception:
+                            pass
+
+                    # High-speed, memory-safe card extraction
                     place = parse_sidebar_card(listing)
 
-                    # In non-headless desktop visual mode, optionally click for inspection
-                    if not headless and (not place.phone_number or not place.address):
+                    # In non-headless desktop visual mode, click to show the supplier details panel on screen
+                    if not headless:
                         try:
                             parent = listing.locator("xpath=..")
-                            parent.click()
-                            time.sleep(1)
+                            parent.click(timeout=2000)
+                            page.wait_for_timeout(1200)
                             full_place = extract_place(page, fallback_name=place.name)
                             if full_place.name:
-                                place = full_place
+                                if full_place.phone_number: place.phone_number = full_place.phone_number
+                                if full_place.address: place.address = full_place.address
+                                if full_place.website: place.website = full_place.website
+                                if full_place.reviews_average: place.reviews_average = full_place.reviews_average
+                                if full_place.reviews_count: place.reviews_count = full_place.reviews_count
                         except Exception:
                             pass
 
@@ -513,6 +525,10 @@ def scrape_places(
                         logging.warning(f"No name found for listing {idx+1}, skipping.")
                 except Exception as e:
                     logging.warning(f"Failed to extract listing {idx+1}: {e}")
+
+            if not headless and len(places) > 0:
+                # Brief pause so the user sees the final completed state on Google Maps
+                page.wait_for_timeout(2500)
         finally:
             try:
                 page.close()
