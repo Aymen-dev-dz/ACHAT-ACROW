@@ -540,7 +540,7 @@ def scrape_places(
 
             if not headless and len(places) > 0:
                 # Brief pause so the user sees the final completed state on Google Maps
-                page.wait_for_timeout(2500)
+                page.wait_for_timeout(4000)
         finally:
             try:
                 page.close()

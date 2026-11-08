@@ -8,10 +8,15 @@ echo ======================================================================
 echo   ACROW DZ - PROCUREMENT SCRAPER (BY AYMEN) - SOURCING ACHATS
 echo ======================================================================
 echo.
-echo   Demarrage de la plateforme sur http://127.0.0.1:5050 ...
-echo   Ouverture automatique de Google Chrome dans quelques secondes...
+echo   Demarrage du serveur local sur http://127.0.0.1:5050 ...
+echo   Votre navigateur Google Chrome va s'ouvrir automatiquement !
 echo.
-echo   Pour arreter le serveur : fermez cette fenetre ou appuyez sur Ctrl+C
+echo   MODE VISUEL :
+echo   Lorsque vous cliquerez sur "Lancer le Sourcing Fournisseurs",
+echo   une deuxieme fenetre Google Chrome s'ouvrira en grand sur votre
+echo   ecran pour vous montrer le scraping Google Maps en direct !
+echo.
+echo   Pour arreter le serveur : fermez cette fenetre noire ou Ctrl+C
 echo ======================================================================
 echo.
 
